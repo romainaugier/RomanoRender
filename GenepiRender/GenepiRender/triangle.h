@@ -13,6 +13,7 @@ public:
 	triangle() {}
 	triangle(const vec3& vt0, const vec3& vt1, const vec3& vt2) : vtx0(vt0), vtx1(vt1), vtx2(vt2), color(1.0f, 1.0f, 1.0f) {}
 	triangle(const vec3& vt0, const vec3& vt1, const vec3& vt2, const vec3& col) : vtx0(vt0), vtx1(vt1), vtx2(vt2), color(col) {}
+	triangle(const vec3& pos, const vec3& col) : vtx0(pos.x - 0.5, pos.y - 0.5, pos.z), vtx1(pos.x + 0.5, pos.y - 0.5, pos.z), vtx2(pos.x, pos.y + 0.5, pos.z), color(col) {}
 
 	const inline vec3& get0() { return vtx0; }
 	const inline vec3& get1() { return vtx1; }

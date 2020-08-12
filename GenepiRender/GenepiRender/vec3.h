@@ -92,3 +92,8 @@ float length(vec3 v)
 {
 	return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
+
+vec3 sum(const vec3& v1, const vec3& v2, const vec3& v3)
+{
+	return vec3((v1.x + v2.x + v3.x) / 3, (v1.y + v2.y + v3.y) / 3, (v1.z + v2.z + v3.z) / 3);
+}

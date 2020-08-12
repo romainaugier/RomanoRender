@@ -138,6 +138,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="objloader.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="triangle.h" />
     <ClInclude Include="vec3.h" />
