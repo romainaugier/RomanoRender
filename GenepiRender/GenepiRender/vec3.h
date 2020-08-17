@@ -9,6 +9,7 @@ struct vec3
 	//constructors
 	vec3() {}
 	vec3(float X, float Y, float Z) :x(X), y(Y), z(Z) {}
+	vec3(float t) : x(t), y(t), z(t) {}
 
 
 	//operators

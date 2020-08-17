@@ -7,10 +7,13 @@
 #include "objloader.h"
 #include "ray.h"
 #include "triangle.h"
+#include "camera.h"
+#include "matrix.h"
+#include "bvh.h"
 
 
-const int xres = 1280;
-const int yres = 720;
+const int xres = 1920;
+const int yres = 1080;
 const int tiles = 8;
 float infinity = std::numeric_limits<float>::max();
 
@@ -60,18 +63,46 @@ std::vector<triangle> scene(int count)
     return tris;
 }
 
-std::vector<triangle> mesh()
+std::vector<triangle> mesh(vec3& min, vec3& max)
 {
+    std::cout << "Loading mesh...." << std::endl;
+    auto start = std::chrono::system_clock::now();
+
     objl::Loader loader;
+
+    float min_x = 0.0, max_x = 0.0, min_y = 0.0, max_y = 0.0, min_z = 0.0, max_z = 0.0;
 
     std::vector<triangle> faces;
 
-    bool loadout = loader.LoadFile("C:/Users/augie/Desktop/xyzdragon.obj");
+    bool loadout = loader.LoadFile("D:/GenepiRender/Models/dino.obj");
 
     if (loadout)
     {
         objl::Mesh mesh = loader.LoadedMeshes[0];
+        //compute mins mand maxs for the bbox
+        for (int j = 0; j < mesh.Vertices.size(); j++)
+        {
+            float px = mesh.Vertices[j].Position.X;
+            float py = mesh.Vertices[j].Position.Y;
+            float pz = mesh.Vertices[j].Position.Z;
 
+            if (px < min_x) min_x = px;
+            if (px > max_x) max_x = px;
+            if (py < min_y) min_y = py;
+            if (py > max_y) max_y = py;
+            if (pz < min_z) min_z = pz;
+            if (pz > max_z) max_z = pz;
+        }
+
+        min.x = min_x;
+        min.y = min_y;
+        min.z = min_z;
+
+        max.x = max_x;
+        max.y = max_y;
+        max.z = max_z;
+
+        //load mesh faces into a mesh vector
         for (int i = 0; i < mesh.Indices.size(); i += 3)
         {
             int vtx_idx0 = mesh.Indices[i];
@@ -96,6 +127,10 @@ std::vector<triangle> mesh()
             faces.push_back(t0);
         }
     }
+
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Mesh loaded in " << elapsed.count() << " seconds" << std::endl;
 
     return faces;
 }
@@ -125,15 +160,21 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
 }
 
 
-vec3 color(const ray& r, std::vector<triangle>& tris)
+vec3 color(const ray& r, std::vector<triangle>& tris, vec3& min, vec3& max)
 {
+    node bound(min, max);
     vec3 color(0.0f, 0.0f, 0.0f);
     const triangle* hit = nullptr;
-    float t;
-    hit = trace(r, tris, t, hit);
+
+    if (bound.bbox_intersect(r))
     {
-        vec3 posT(r.origin() + r.direction() * t);
-        if(hit != nullptr) color = hit->color;
+        //color = vec3(1.0f); //debug
+        float t;
+        hit = trace(r, tris, t, hit);
+        {
+            vec3 posT(r.origin() + r.direction() * t);
+            if (hit != nullptr) color = hit->color;
+        }
     }
     
     return color;
@@ -158,31 +199,54 @@ int main()
 
     float fov = 51.52;
     float scale = tan(deg2rad(fov * 0.5));
+    float imageAspectRatio = xres / (float)yres;
+
+    vec3 campos(-4.0, 2.0, 9.0);
+    vec3 aim(-0.5, 0.0, 0.0);
+    vec3 up(0, 1, 0);
+
+    vec3 zAxis = ((campos - aim).normalize());
+    vec3 xAxis = (cross(up, zAxis).normalize());
+    vec3 yAxis = cross(zAxis, xAxis);
+
+    Matrix44<float> cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, campos.x, campos.y, campos.z, 1.0f);
+
+    Vec3f rayOriginWorld, rayPWorld;
+    Vec3f campos2(0.0, 0.0, 0.0);
+
+    camera cam(campos, aim, fov, imageAspectRatio);
+
+    vec3 min(0.0f), max(0.0f);
 
     std::vector<triangle> tris = scene(50);
-    std::vector<triangle> sphere = mesh();
+    std::vector<triangle> sphere = mesh(min, max);
 
+    std::cout << "Starting render..." << std::endl;
     auto start = std::chrono::system_clock::now();
+
+//#pragma omp parallel
 
     for (int y = 0; y < yres; y++)
     {
         for (int x = 0; x < xres; x++)
         {
-            float x_ = (2 * (x + 0.5) / float(xres) - 1) * float(xres / yres) * scale;
-            float y_ = (1 - 2 * (y + 0.5) / float(yres)) * scale;
+            float x_ = (2 * (x + 0.5) / (float)xres - 1) * imageAspectRatio * scale;
+            float y_ = (1 - 2 * (y + 0.5) / (float)yres) * scale;
 
-            vec3 dir(x_, y_, -1);
-            vec3 origin(0.0f, 0.0f, 0.0f);
+            cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
+            cameraToWorld.multVecMatrix(Vec3f(x_, y_, -1), rayPWorld);
+            Vec3f rayDir = rayPWorld - rayOriginWorld;
+            rayDir.normalize();
 
-            ray ray(origin, dir);
-            vec3 col = color(ray, sphere);
+            vec3 dir(rayDir.x, rayDir.y, rayDir.z);
+
+            ray ray(campos, dir);
+
+            vec3 col = color(ray, sphere, min, max);
 
             pixel[0] = col.x;
             pixel[1] = col.y;
             pixel[2] = col.z;
-
-            //QRgb rgb = qRgb(r * 255, g * 255, b * 255);
-            //background.setPixel(x, y, rgb
 
             buffer.setpixel(x, y, z, pixel);
         }
@@ -192,7 +256,6 @@ int main()
 
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Render time : " << elapsed.count() << " seconds" << std::endl;
-
 
     buffer.write(filename);
 }
