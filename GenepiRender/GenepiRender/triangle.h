@@ -50,30 +50,7 @@ bool intersect(const vec3& orig, const vec3& dir, triangle& tri, float& u, float
 }
 
 
-bool intersect(const vec3& orig, const vec3& dir, vec3& p0, vec3& p1, vec3& p2, float& u, float& v, float& t)
+bool is_in(triangle& tri, node nd)
 {
-	constexpr float epsilon = 1e-8;
 
-	vec3 p0p1 = p1 - p0;
-	vec3 p0p2 = p2 - p0;
-	vec3 pvec = cross(dir, p0p2);
-	float det = dot(p0p1, pvec);
-
-	if (det < epsilon) return false;
-
-	if (fabs(det) < epsilon) return false;
-
-	float invDet = 1 / det;
-
-	vec3 tvec = orig - p0;
-	u = dot(tvec, pvec) * invDet;
-	if (u < 0 || u > 1) return false;
-
-	vec3 qvec = cross(tvec, p0p1);
-	v = dot(dir, qvec) * invDet;
-	if (v < 0 || u + v > 1) return false;
-
-	t = dot(p0p2, qvec) * invDet;
-
-	return true;
 }
