@@ -167,28 +167,6 @@ bool node::bbox_intersect(const ray& r)
 	return true;
 }
 
-bool node::tree_intersect(ray r)
-{
-	if (this->bbox_intersect(r))
-	{
-		if (this->children[0] == nullptr)
-		{
-			std::cout << "1" << std::endl;
-			return this->bbox_intersect(r);
-		}
-		/*{
-			std::cout << "Hit !" << std::endl;
-		}*/
-		else
-		{
-			for (auto child : this->children)
-			{
-				if (child == nullptr) continue;
-				child->tree_intersect(r);
-			}
-		}
-	}
-}
 
 void tree_info(node* tree, int size)
 {
