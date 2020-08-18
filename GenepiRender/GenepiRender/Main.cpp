@@ -160,27 +160,6 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
 }
 
 
-inline bool node::tree_intersect(ray r)
-{
-    if (this->bbox_intersect(r))
-    {
-        if (this->children[0] == nullptr)
-        {
-            std::cout << "1" << std::endl;
-            return true;
-        }
-        else
-        {
-            for (auto child : this->children)
-            {
-                if (child == nullptr) continue;
-                child->tree_intersect(r);
-            }
-        }
-    }
-}
-
-
 //vec3 color(const ray& r, std::vector<triangle>& tris, vec3& min, vec3& max)
 //{
 //    node bound(min, max);
