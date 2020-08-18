@@ -166,8 +166,7 @@ inline bool node::tree_intersect(ray r)
     {
         if (this->children[0] == nullptr)
         {
-            //std::cout << "1" << std::endl;
-            //return this->bbox_intersect(r);
+            std::cout << "1" << std::endl;
             return true;
         }
         else
