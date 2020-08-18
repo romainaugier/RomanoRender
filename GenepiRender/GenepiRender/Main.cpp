@@ -12,8 +12,8 @@
 #include "bvh.h"
 
 
-const int xres = 1920;
-const int yres = 1080;
+const int xres = 200;
+const int yres = 100;
 const int tiles = 8;
 float infinity = std::numeric_limits<float>::max();
 
@@ -160,26 +160,26 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
 }
 
 
-vec3 color(const ray& r, std::vector<triangle>& tris, vec3& min, vec3& max)
-{
-    node bound(min, max);
-    vec3 color(0.0f, 0.0f, 0.0f);
-    const triangle* hit = nullptr;
-
-    if (bound.bbox_intersect(r))
-    {
-        //color = vec3(1.0f); //debug
-        float t;
-        hit = trace(r, tris, t, hit);
-        {
-            vec3 posT(r.origin() + r.direction() * t);
-            if (hit != nullptr) color = hit->color;
-        }
-    }
-    
-    return color;
-    
-}
+//vec3 color(const ray& r, std::vector<triangle>& tris, vec3& min, vec3& max)
+//{
+//    node bound(min, max);
+//    vec3 color(0.0f, 0.0f, 0.0f);
+//    const triangle* hit = nullptr;
+//
+//    if (bound.bbox_intersect(r))
+//    {
+//        //color = vec3(1.0f); //debug
+//        float t;
+//        hit = trace(r, tris, t, hit);
+//        {
+//            vec3 posT(r.origin() + r.direction() * t);
+//            if (hit != nullptr) color = hit->color;
+//        }
+//    }
+//    
+//    return color;
+//    
+//}
 
 
 int main()
@@ -217,9 +217,22 @@ int main()
     camera cam(campos, aim, fov, imageAspectRatio);
 
     vec3 min(0.0f), max(0.0f);
+    bool is_leaf = false;
 
     std::vector<triangle> tris = scene(50);
     std::vector<triangle> sphere = mesh(min, max);
+
+    auto start_arts = std::chrono::system_clock::now();
+    std::cout << "Building acceleration structure..." << std::endl;
+    node tree(min, max, is_leaf);
+    divide(&tree, 0, is_leaf);
+    auto end_arts = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_arts = end_arts - start_arts;
+    std::cout << "Acceleration structure built in " << elapsed_arts.count() << " seconds" << std::endl;
+
+    int size = 0;
+
+    //std::cout << size << std::endl;
 
     std::cout << "Starting render..." << std::endl;
     auto start = std::chrono::system_clock::now();
@@ -242,7 +255,20 @@ int main()
 
             ray ray(campos, dir);
 
-            vec3 col = color(ray, sphere, min, max);
+            vec3 col;
+
+            if (tree.tree_intersect(ray))
+            {
+                col = vec3(1.0f, 1.0f, 1.0f);
+                std::cout << "Hit !" << std::endl;
+            }
+
+            else
+            {
+                col = vec3(0.0f);
+            }
+            //
+            //vec3 col = color(ray, sphere, min, max);
 
             pixel[0] = col.x;
             pixel[1] = col.y;

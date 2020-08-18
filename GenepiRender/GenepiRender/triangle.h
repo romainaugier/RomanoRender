@@ -50,7 +50,7 @@ bool intersect(const vec3& orig, const vec3& dir, triangle& tri, float& u, float
 }
 
 
-bool is_in(triangle& tri, node nd)
-{
-
-}
+//bool is_in(triangle& tri, node nd)
+//{
+//
+//}
