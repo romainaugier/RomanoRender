@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <random>
 #include "ray.h"
 #include "vec3.h"
 
@@ -23,17 +24,19 @@
 class node
 {
 public:
-	node(vec3 min_bound, vec3 max_bound, bool is_leaf) :
+	node(vec3 min_bound, vec3 max_bound, bool is_leaf, vec3 col) :
 		min(min_bound),
 		max(max_bound),
 		leaf(is_leaf),
+		color(col),
 		children(8) {}
 
 	bool bbox_intersect(const ray& r);
-	bool tree_intersect(ray r);
+	vec3 tree_intersect(ray r, vec3 color);
 
 public:
 	vec3 min, max;
+	vec3 color;
 	bool leaf;
 	std::vector<node*> children;
 };
@@ -43,10 +46,15 @@ void divide(node* tree, int depth, bool is_leaf)
 {
 	//recursive bbox division
 
+	std::random_device rd;
+	std::mt19937 mt(rd());
+	std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
 	//box1 : min(min), max(max/2)
 	vec3 bx1_min(tree->min);
 	vec3 bx1_max(tree->max / 2);
-	tree->children[0] = new node(bx1_min, bx1_max, is_leaf);
+	vec3 rand_color1(dist(mt), dist(mt), dist(mt));
+	tree->children[0] = new node(bx1_min, bx1_max, is_leaf, rand_color1);
 	//std::cout << is_leaf << std::endl;
 	//std::cout << bx1_min;
 	//std::cout << bx1_max << std::endl;											//debug
@@ -54,39 +62,46 @@ void divide(node* tree, int depth, bool is_leaf)
 	//box2 : min(max.x/2, min.y, min.z), max(max.x, max.y/2, max.z/2)
 	vec3 bx2_min(tree->min.x / 2, tree->min.y, tree->min.z / 2);
 	vec3 bx2_max(tree->max.x, tree->min.y / 2, tree->min.z);
-	tree->children[1] = new node(bx2_min, bx2_max, is_leaf);
+	vec3 rand_color2(dist(mt), dist(mt), dist(mt));
+	tree->children[1] = new node(bx2_min, bx2_max, is_leaf, rand_color2);
 
 	//box3 : min(max.x/2, min.y, max.z/2), max(max.x, max.y/2, max.z)
 	vec3 bx3_min(tree->max.x / 2, tree->min.y, tree->max.z / 2);
 	vec3 bx3_max(tree->max.x, tree->max.y / 2, tree->max.z);
-	tree->children[2] = new node(bx3_min, bx3_max, is_leaf);
+	vec3 rand_color3(dist(mt), dist(mt), dist(mt));
+	tree->children[2] = new node(bx3_min, bx3_max, is_leaf, rand_color3);
 
 	//box4 : min(min.x, min.y, max.z/2), max(max.x/2, max.y/2, max.z)
 	vec3 bx4_min(tree->min.x, tree->max.y / 2, tree->min.z);
 	vec3 bx4_max(tree->max.x / 2, tree->max.y / 2, tree->max.z);
-	tree->children[3] = new node(bx4_min, bx4_max, is_leaf);
+	vec3 rand_color4(dist(mt), dist(mt), dist(mt));
+	tree->children[3] = new node(bx4_min, bx4_max, is_leaf, rand_color4);
 
 	//box5 : min(min.x, max.y/2, min.z), max(max.x/2, max.y, max.z/2)
 	vec3 bx5_min(tree->min.x, tree->max.y / 2, tree->min.z);
 	vec3 bx5_max(tree->max.x / 2, tree->max.y, tree->max.z / 2);
-	tree->children[4] = new node(bx5_min, bx5_max, is_leaf);
+	vec3 rand_color5(dist(mt), dist(mt), dist(mt));
+	tree->children[4] = new node(bx5_min, bx5_max, is_leaf, rand_color5);
 
 	//box6 : min(max.x/2, max.y/2, min.z), max(max.x, max.y, max.z/2)
 	vec3 bx6_min(tree->max.x / 2, tree->max.y / 2, tree->min.z);
 	vec3 bx6_max(tree->max.x, tree->max.y, tree->max.z / 2);
-	tree->children[5] = new node(bx6_min, bx6_max, is_leaf);
+	vec3 rand_color6(dist(mt), dist(mt), dist(mt));
+	tree->children[5] = new node(bx6_min, bx6_max, is_leaf, rand_color6);
 
 	//box7 : min(max.x/2, max.y/2, max.z/2), max(max.x, max.y, max.z)
 	vec3 bx7_min(tree->max.x / 2, tree->max.y / 2, tree->max.z / 2);
 	vec3 bx7_max(tree->max);
-	tree->children[6] = new node(bx7_min, bx7_max, is_leaf);
+	vec3 rand_color7(dist(mt), dist(mt), dist(mt));
+	tree->children[6] = new node(bx7_min, bx7_max, is_leaf, rand_color7);
 
 	//box8 : min(min.x, max.y/2, max.z/2), max(max.x/2, max.y, max.z)
 	vec3 bx8_min(tree->min.x, tree->max.y / 2, tree->max.z / 2);
 	vec3 bx8_max(tree->max.x / 2, tree->max.y, tree->max.z);
-	tree->children[7] = new node(bx8_min, bx8_max, is_leaf);
+	vec3 rand_color8(dist(mt), dist(mt), dist(mt));
+	tree->children[7] = new node(bx8_min, bx8_max, is_leaf, rand_color8);
 
-	int N = 3;
+	int N = 2;
 	depth++;
 
 	if (depth < N)
@@ -167,28 +182,30 @@ bool node::bbox_intersect(const ray& r)
 	return true;
 }
 
-bool node::tree_intersect(ray r)
+
+inline vec3 node::tree_intersect(ray r, vec3 color)
 {
 	if (this->bbox_intersect(r))
 	{
 		if (this->children[0] == nullptr)
 		{
-			std::cout << "1" << std::endl;
-			return this->bbox_intersect(r);
+			//std::cout << "1" << std::endl;
+			color = this->color;
+			return color;
 		}
-		/*{
-			std::cout << "Hit !" << std::endl;
-		}*/
 		else
 		{
 			for (auto child : this->children)
 			{
 				if (child == nullptr) continue;
-				child->tree_intersect(r);
+				child->tree_intersect(r, color);
 			}
+
 		}
 	}
+	else return vec3(0.f);
 }
+
 
 void tree_info(node* tree, int size)
 {
