@@ -12,8 +12,8 @@
 #include "bvh.h"
 
 
-const int xres = 200;
-const int yres = 100;
+const int xres = 1280;
+const int yres = 720;
 const int tiles = 8;
 float infinity = std::numeric_limits<float>::max();
 
@@ -201,8 +201,8 @@ int main()
     float scale = tan(deg2rad(fov * 0.5));
     float imageAspectRatio = xres / (float)yres;
 
-    vec3 campos(-4.0, 2.0, 9.0);
-    vec3 aim(-0.5, 0.0, 0.0);
+    vec3 campos(0.0, 0.0, 5.0);
+    vec3 aim(0.0, 0.0, 0.0);
     vec3 up(0, 1, 0);
 
     vec3 zAxis = ((campos - aim).normalize());
@@ -224,7 +224,8 @@ int main()
 
     auto start_arts = std::chrono::system_clock::now();
     std::cout << "Building acceleration structure..." << std::endl;
-    node tree(min, max, is_leaf);
+    vec3 color_node(1.f);
+    node tree(min, max, is_leaf, color_node);
     divide(&tree, 0, is_leaf);
     auto end_arts = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_arts = end_arts - start_arts;
@@ -257,16 +258,8 @@ int main()
 
             vec3 col;
 
-            if (tree.tree_intersect(ray))
-            {
-                col = vec3(1.0f, 1.0f, 1.0f);
-                std::cout << "Hit !" << std::endl;
-            }
-
-            else
-            {
-                col = vec3(0.0f);
-            }
+            col = tree.tree_intersect(ray, col);
+           
             //
             //vec3 col = color(ray, sphere, min, max);
 
