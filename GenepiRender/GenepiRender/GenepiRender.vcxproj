@@ -143,8 +143,10 @@
     <ClInclude Include="bvh.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="matrix.h" />
+    <ClInclude Include="scene.h" />
     <ClInclude Include="objloader.h" />
     <ClInclude Include="ray.h" />
+    <ClInclude Include="tiles.h" />
     <ClInclude Include="triangle.h" />
     <ClInclude Include="vec3.h" />
   </ItemGroup>
