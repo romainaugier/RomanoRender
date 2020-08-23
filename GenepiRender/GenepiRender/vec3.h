@@ -11,49 +11,6 @@ struct vec3
 	vec3(float X, float Y, float Z) :x(X), y(Y), z(Z) {}
 	vec3(float t) : x(t), y(t), z(t) {}
 
-
-	//operators
-	const vec3 operator+(const vec3& other) const
-	{
-		return vec3(x + other.x, y + other.y, z + other.z);
-	}
-
-	const vec3 operator+(const float& t) const
-	{
-		return vec3(x + t, y + t, z + t);
-	}
-
-	const vec3 operator-(const vec3& other) const
-	{
-		return vec3(x - other.x, y - other.y, z - other.z);
-	}
-
-	const vec3 operator-(const float& t) const
-	{
-		return vec3(x - t, y - t, z - t);
-	}
-
-	const vec3 operator*(const vec3& other) const
-	{
-		return vec3(x * other.x, y * other.y, z * other.z);
-	}
-
-	const vec3 operator*(const float& t) const
-	{
-		return vec3(x * t, y * t, z * t);
-	}
-
-	const vec3 operator/(const vec3& other) const
-	{
-		return vec3(x / other.x, y / other.y, z / other.z);
-	}
-
-	const vec3 operator/(const float& t) const
-	{
-		return vec3(x / t, y / t, z / t);
-	}
-
-
 	//functions
 	float length() const
 	{
@@ -77,6 +34,53 @@ std::ostream& operator<<(std::ostream& out, const vec3& v)
 {
 	out << v.x << ", " << v.y << ", " << v.z << std::endl;
 	return out;
+}
+
+
+//operators
+const vec3 operator+(const vec3& vec, const vec3& other)
+{
+	return vec3(vec.x + other.x, vec.y + other.y, vec.z + other.z);
+}
+
+const vec3 operator+(const vec3& vec, const float& t)
+{
+	return vec3(vec.x + t, vec.y + t, vec.z + t);
+}
+
+const vec3 operator-(const vec3& vec, const vec3& other)
+{
+	return vec3(vec.x - other.x, vec.y - other.y, vec.z - other.z);
+}
+
+const vec3 operator-(const vec3& vec, const float& t)
+{
+	return vec3(vec.x - t, vec.y - t, vec.z - t);
+}
+
+const vec3 operator*(const vec3& vec, const vec3& other)
+{
+	return vec3(vec.x * other.x, vec.y * other.y, vec.z * other.z);
+}
+
+const vec3 operator*(const vec3& vec, const float& t)
+{
+	return vec3(vec.x * t, vec.y * t, vec.z * t);
+}
+
+const vec3 operator/(const vec3& vec, const vec3& other)
+{
+	return vec3(vec.x / other.x, vec.y / other.y, vec.z / other.z);
+}
+
+const vec3 operator/(const vec3& vec, const float& t) 
+{
+	return vec3(vec.x / t, vec.y / t, vec.z / t);
+}
+
+vec3 operator/(int& t, vec3& n)
+{
+	return vec3(t / n.x, t / n.y, t / n.z);
 }
 
 const float dot(const vec3& v1, const vec3& v2)
