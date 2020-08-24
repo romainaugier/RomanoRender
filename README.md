@@ -23,8 +23,9 @@ Planned :
 Progress:
 
 24/08/2020
-Pixar Kitchen, rendered in 45 seconds.
-![Pxr Kitchen](https://imgur.com/fOvsSbw.png)
 
-X-Wing, rendered in 5 seconds.
+![Pxr Kitchen](https://imgur.com/fOvsSbw.png)
+Pixar Kitchen, rendered in 45 seconds.
+
 ![X Wing](https://imgur.com/sKMp5yJ.png)
+X-Wing, rendered in 5 seconds.
