@@ -15,8 +15,8 @@
 #include "scene.h"
 
 
-const int xres = 1000;
-const int yres = 1000;
+const int xres = 500;
+const int yres = 500;
 float infinity = std::numeric_limits<float>::max();
 
 
@@ -35,7 +35,7 @@ void load_scene(std::vector<mesh>& scene)
 
     float min_x = 0.0, max_x = 0.0, min_y = 0.0, max_y = 0.0, min_z = 0.0, max_z = 0.0;
 
-    bool loadout = loader.LoadFile("D:/GenepiRender/Models/scene.obj");
+    bool loadout = loader.LoadFile("D:/GenepiRender/Models/scene_x_wing.obj");
 
     std::vector<triangle> faces;
 
@@ -98,7 +98,7 @@ void load_scene(std::vector<mesh>& scene)
                 std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                 vec3 rand_color(dist(mt), dist(mt), dist(mt));
 
-                triangle t0(vtx_0, vtx_1, vtx_2, sum(n_0, n_1, n_2));
+                triangle t0(vtx_0, vtx_1, vtx_2, n_0, n_1, n_2, sum(n_0, n_1, n_2));
 
                 faces.push_back(t0);
             }
@@ -115,10 +115,8 @@ void load_scene(std::vector<mesh>& scene)
 }
 
 
-const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near, const triangle *hit)
+const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near, const triangle *hit, float& u, float& v)
 {
-    float u = 0.0f;
-    float v = 0.0f;
     float t;
     t_near = infinity;
     int id;
@@ -142,12 +140,20 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
 vec3 color(const ray& r, std::vector<triangle>& tris, vec3 color)
 {
     const triangle* hit = nullptr;
-
+    vec3 hit_pos;
+    vec3 hit_normal;
+    float u, v, w;
     float t;
-    hit = trace(r, tris, t, hit);
-    vec3 posT(r.origin() + r.direction() * t);
-    if (hit != nullptr) color = hit->color;
-    
+    hit = trace(r, tris, t, hit, u, v);
+
+    if (hit != nullptr)
+    {
+        hit_pos = r.origin() + r.direction() * t;
+        hit_normal = (1 - u - v) * hit->n0 + u * hit->n1 + v * hit->n2;
+        hit_normal.normalize();
+        color = hit->color / 2 + vec3(0.5f);
+        //color = hit_normal;
+    }
     return color;    
 }
 
@@ -170,7 +176,6 @@ std::vector<tile> generate_tiles(const int& number, const int& xres, const int &
             tiles.push_back(new_tile);
         }
     }
-
     return tiles;
 }
 
@@ -181,8 +186,8 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, s
     float scale = tan(deg2rad(fov * 0.5));
     float imageAspectRatio = xres / (float)yres;
 
-    vec3 campos(0.0, 4.9, 15.0);
-    vec3 aim(0.0, 4.9, 0.0);
+    vec3 campos(0.0, 5.0, 15.0);
+    vec3 aim(0.0, 5.0, 0.0);
     vec3 up(0, 1, 0);
     
     vec3 zAxis = ((campos - aim).normalize());
@@ -217,10 +222,12 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, s
                 float t;
                 std::vector<triangle> hit;
 
-                for (auto tree : trees)
+                /*for (auto tree : trees)
                 {
                     hit = tree.tree_intersect(ray, t);
-                }
+                }*/
+
+                hit = scene_intersect(ray, t, trees);
         
                 if(hit.size() > 0)
                     col = color(ray, hit, col);
@@ -266,7 +273,6 @@ int main()
 
         if (obj.tris.size() > 100)
             divide(&tree, 8, 0);
-
         else divide(&tree, 1, 10);
 
         push_triangles(&tree, obj.tris);

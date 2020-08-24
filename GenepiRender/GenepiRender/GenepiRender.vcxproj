@@ -142,6 +142,7 @@
   <ItemGroup>
     <ClInclude Include="bvh.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="material.h" />
     <ClInclude Include="matrix.h" />
     <ClInclude Include="scene.h" />
     <ClInclude Include="objloader.h" />
