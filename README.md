@@ -28,4 +28,5 @@ Progress:
 Pixar Kitchen, rendered in 45 seconds.
 
 ![X Wing](https://imgur.com/sKMp5yJ.png)
+
 X-Wing, rendered in 5 seconds.
