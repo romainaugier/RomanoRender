@@ -13,10 +13,11 @@
 #include "bvh.h"
 #include "tiles.h"
 #include "scene.h"
+#include "material.h"
 
 
-const int xres = 500;
-const int yres = 500;
+const int xres = 1000;
+const int yres = 1000;
 float infinity = std::numeric_limits<float>::max();
 
 
@@ -35,7 +36,7 @@ void load_scene(std::vector<mesh>& scene)
 
     float min_x = 0.0, max_x = 0.0, min_y = 0.0, max_y = 0.0, min_z = 0.0, max_z = 0.0;
 
-    bool loadout = loader.LoadFile("D:/GenepiRender/Models/scene_x_wing.obj");
+    bool loadout = loader.LoadFile("D:/GenepiRender/Models/scene_cubes.obj");
 
     std::vector<triangle> faces;
 
@@ -93,12 +94,16 @@ void load_scene(std::vector<mesh>& scene)
                 vec3 n_1(object.Vertices[vtx_idx1].Normal.X, object.Vertices[vtx_idx1].Normal.Y, object.Vertices[vtx_idx1].Normal.Z);
                 vec3 n_2(object.Vertices[vtx_idx2].Normal.X, object.Vertices[vtx_idx2].Normal.Y, object.Vertices[vtx_idx2].Normal.Z);
 
+                vec3 t_0(object.Vertices[vtx_idx0].TextureCoordinate.X, object.Vertices[vtx_idx0].TextureCoordinate.Y, 0.0f);
+                vec3 t_1(object.Vertices[vtx_idx1].TextureCoordinate.X, object.Vertices[vtx_idx1].TextureCoordinate.Y, 0.0f);
+                vec3 t_2(object.Vertices[vtx_idx2].TextureCoordinate.X, object.Vertices[vtx_idx2].TextureCoordinate.Y, 0.0f);
+
                 std::random_device rd;
                 std::mt19937 mt(rd());
                 std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                 vec3 rand_color(dist(mt), dist(mt), dist(mt));
 
-                triangle t0(vtx_0, vtx_1, vtx_2, n_0, n_1, n_2, sum(n_0, n_1, n_2));
+                triangle t0(vtx_0, vtx_1, vtx_2, n_0, n_1, n_2, t_0, t_1, t_2, sum(n_0, n_1, n_2));
 
                 faces.push_back(t0);
             }
@@ -121,15 +126,19 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
     t_near = infinity;
     int id;
     int i = 0;
+    float uTriangle, vTriangle;
     std::vector<triangle>::const_iterator iter = tris.begin();
     for (; iter != tris.end(); iter++)
     {
         t = infinity;
-        if (intersect(r.origin(), r.direction(), tris[i], u, v, t) && t < t_near)
+        if (intersect(r.origin(), r.direction(), tris[i], uTriangle, vTriangle, t) && t < t_near)
         {
             //std::cout << "hit" << std::endl;
             hit = &(*iter);
             t_near = t;
+            u = uTriangle;
+            v = vTriangle;
+
         }
         i++;
     }
@@ -137,22 +146,35 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
 }
 
 
-vec3 color(const ray& r, std::vector<triangle>& tris, vec3 color)
+vec3 color(const ray& r, std::vector<triangle>& tris, vec3 color, float&u, float& v, OIIO::ImageBuf& texture, int& tex_width, int& tex_height)
 {
     const triangle* hit = nullptr;
     vec3 hit_pos;
     vec3 hit_normal;
-    float u, v, w;
+    vec3 hit_tex;
     float t;
+    const int M = 10;
     hit = trace(r, tris, t, hit, u, v);
+
+    //int tex_width = texture.oriented_full_width();
+    //int tex_height = texture.oriented_full_height();
 
     if (hit != nullptr)
     {
         hit_pos = r.origin() + r.direction() * t;
         hit_normal = (1 - u - v) * hit->n0 + u * hit->n1 + v * hit->n2;
-        hit_normal.normalize();
-        color = hit->color / 2 + vec3(0.5f);
-        //color = hit_normal;
+        hit_tex = (1 - u - v) * hit->t0 + u * hit->t1 + v * hit->t2;
+
+        float checker = (fmod(hit_tex.x * M, 1.0) > 0.5) ^ (fmod(hit_tex.y * M, 1.0) < 0.5);
+        float c = 0.3 * (1.0 - checker) + 0.7 * checker;
+        float dotView = std::max(0.f, dot(hit_normal, -1.0 * r.direction()));
+        //color = hit_normal.normalize() / 2 + vec3(0.5f);
+        //color = vec3(c);
+        //color = vec3(1.0f);
+        //if (fabs(hit_tex.x) > 1 || fabs(hit_tex.x) < 0 || fabs(hit_tex.y) > 1 || fabs(hit_tex.y) < 0) color = vec3(1.0, 0.0, 0.0);
+        
+        color = get_tex_pixel(texture, fabs(hit_tex.x) * tex_width, fabs(hit_tex.y) * tex_height) * dotView;
+        //color = vec3(u, v, 1 - u - v);
     }
     return color;    
 }
@@ -180,7 +202,7 @@ std::vector<tile> generate_tiles(const int& number, const int& xres, const int &
 }
 
 
-static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, std::vector<node>& trees)
+static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, std::vector<node>& trees, OIIO::ImageBuf& texture, int tex_width, int tex_height)
 {
     float fov = 50;
     float scale = tan(deg2rad(fov * 0.5));
@@ -220,6 +242,7 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, s
         
                 vec3 col(0.f);
                 float t;
+                float u, v;
                 std::vector<triangle> hit;
 
                 /*for (auto tree : trees)
@@ -227,10 +250,10 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, s
                     hit = tree.tree_intersect(ray, t);
                 }*/
 
-                hit = scene_intersect(ray, t, trees);
+                hit = scene_intersect(ray, trees);
         
                 if(hit.size() > 0)
-                    col = color(ray, hit, col);
+                    col = color(ray, hit, col, u, v, texture, tex_width, tex_height);
         
                 //col = color(ray, sphere, min, max);
         
@@ -261,7 +284,12 @@ int main()
 
     std::vector<mesh> scene;
     load_scene(scene);
+
+    OIIO::ImageBuf texture = load_texture("D:/Quixel/Downloaded/surface/floors_tiles_tl3mbabg/tl3mbabg_4K_Albedo.jpg");
     
+    int tex_width = texture.oriented_full_width();
+    int tex_height = texture.oriented_full_height();
+
     auto start_arts = std::chrono::system_clock::now();
     std::cout << "Building acceleration structure..." << std::endl;
 
@@ -272,8 +300,8 @@ int main()
         node tree(obj.min, obj.max, vec3(1.f));
 
         if (obj.tris.size() > 100)
-            divide(&tree, 8, 0);
-        else divide(&tree, 1, 10);
+            divide(&tree, 4, 0);
+        else divide(&tree, 1, 1);
 
         push_triangles(&tree, obj.tris);
 
@@ -293,7 +321,7 @@ int main()
 
     for (auto& tile : tiles)
     {
-        futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, scene_tree));
+        futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, scene_tree, texture, tex_width, tex_height));
         //render(&tile, tile.xstart, tile.xend, tile.ystart, tile.yend, tree);
     }
 

@@ -20,27 +20,24 @@ public:
 };
 
 
-std::vector<triangle> scene_intersect(ray& r, float& t_near, std::vector<node>& trees)
+std::vector<triangle> scene_intersect(ray& r, std::vector<node>& trees)
 {
     std::vector<triangle> hit_triangles;
 
-    t_near = kinfinity;
-    float t = kinfinity;
 
     for (auto& tree : trees)
     {
-        if (tree.bbox_intersect(r, t))
+        if (tree.bbox_intersect(r))
         {
             for (auto child : tree.nodes)
             {
-                if (child->bbox_intersect(r, t))
+                if (child->bbox_intersect(r))
                 {
                     hit_triangles.insert(hit_triangles.begin(),
                         child->tris.begin(),
                         child->tris.end());
                 }
             }
-            t_near = t;
         }
     }
     return hit_triangles;
