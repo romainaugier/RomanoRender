@@ -21,8 +21,8 @@ public:
 			bounds[1] = max;
 		}
 
-	bool bbox_intersect(const ray& r, float& t);
-	std::vector<triangle> tree_intersect(const ray& r, float& t_near);
+	bool bbox_intersect(const ray& r);
+	std::vector<triangle> tree_intersect(const ray& r);
 
 public:
 	vec3 min, max;
@@ -177,7 +177,7 @@ void push_triangles(node* tree, std::vector<triangle> triangles)
 }
 
 
-bool node::bbox_intersect(const ray& r, float& t)
+bool node::bbox_intersect(const ray& r)
 {
 	float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
@@ -203,8 +203,6 @@ bool node::bbox_intersect(const ray& r, float& t)
 	if (tzmax < tmax)
 		tmax = tzmax;
 
-	t = tmin;
-
 	return true;
 }
 
@@ -212,24 +210,20 @@ bool node::bbox_intersect(const ray& r, float& t)
 static float kinfinity = std::numeric_limits<float>::max();
 
 
-std::vector<triangle> node::tree_intersect(const ray& r, float& t_near)
+std::vector<triangle> node::tree_intersect(const ray& r)
 {
 	std::vector<triangle> hit_triangles;
 
-	t_near = kinfinity;
-	float t = kinfinity;
-
-	if (this->bbox_intersect(r, t) && t < t_near)
+	if (this->bbox_intersect(r))
 	{
 		for (auto child : this->nodes)
 		{
-			if (child->bbox_intersect(r, t))
+			if (child->bbox_intersect(r))
 			{
 				//hit_triangles.reserve(hit_triangles.size() + child->tris.size());
 				hit_triangles.insert(hit_triangles.begin(), child->tris.begin(), child->tris.end());
 			}
 		}
-		t_near = t;
 	}
 
 	return hit_triangles;

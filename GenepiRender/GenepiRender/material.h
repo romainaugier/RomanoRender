@@ -66,3 +66,17 @@ public:
     const char *normal_map;
     OIIO::ImageBuf normal_buffer;
 };
+
+
+OIIO::ImageBuf load_texture(const char* path)
+{
+    OIIO::ImageBuf tex(path);
+    return tex;
+}
+
+vec3 get_tex_pixel(OIIO::ImageBuf& tex, int x, int y)
+{
+    float pixel[3];
+    tex.OIIO::ImageBuf::getpixel(x, y, 0, pixel);
+    return vec3(pixel[0], pixel[1], pixel[2]);
+}
