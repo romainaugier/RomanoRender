@@ -10,10 +10,11 @@ class node
 {
 public:
 	node() {}
-	node(vec3 min_bound, vec3 max_bound, vec3 col) :
+	node(vec3 min_bound, vec3 max_bound, vec3 col, int tree_id) :
 		min(min_bound),
 		max(max_bound),
 		color(col),
+		id(tree_id),
 		nodes(),
 		tris() 
 		{
@@ -21,7 +22,7 @@ public:
 			bounds[1] = max;
 		}
 
-	bool bbox_intersect(const ray& r);
+	bool bbox_intersect(const ray& r, float& t_min, float& t_max);
 	std::vector<triangle> tree_intersect(const ray& r);
 
 public:
@@ -30,6 +31,7 @@ public:
 	std::vector<triangle> tris;
 	std::vector<node*> nodes;
 	vec3 bounds[2];
+	int id;
 };
 
 
@@ -112,12 +114,12 @@ void divide(node* tree, int count, int special)
 					min_axis = vec3(min.x + ((maxx / count) * x), min.y + ((maxy / count) * y), min.z + ((maxz / count) * z));
 					max_axis = vec3(min.x + (maxx / count * (x + 1)), min.y + (maxy / count * (y + 1)), min.z + (maxz / count * (z + 1)));
 					vec3 rand_color(dist(mt));
-					tree->nodes.push_back(new node(min_axis, max_axis, rand_color));
+					tree->nodes.push_back(new node(min_axis, max_axis, rand_color, 0));
 				}
 			}
 		}
 	}
-	if(special > 0) tree->nodes.push_back(new node(min, max, vec3(1.0f)));
+	if(special > 0) tree->nodes.push_back(new node(min, max, vec3(1.0f), 0));
 }
 
 
@@ -177,7 +179,7 @@ void push_triangles(node* tree, std::vector<triangle> triangles)
 }
 
 
-bool node::bbox_intersect(const ray& r)
+bool node::bbox_intersect(const ray& r, float& t_min, float& t_max)
 {
 	float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
@@ -203,28 +205,13 @@ bool node::bbox_intersect(const ray& r)
 	if (tzmax < tmax)
 		tmax = tzmax;
 
-	return true;
-}
-
-
-static float kinfinity = std::numeric_limits<float>::max();
-
-
-std::vector<triangle> node::tree_intersect(const ray& r)
-{
-	std::vector<triangle> hit_triangles;
-
-	if (this->bbox_intersect(r))
+	if (tmin < 0)
 	{
-		for (auto child : this->nodes)
-		{
-			if (child->bbox_intersect(r))
-			{
-				//hit_triangles.reserve(hit_triangles.size() + child->tris.size());
-				hit_triangles.insert(hit_triangles.begin(), child->tris.begin(), child->tris.end());
-			}
-		}
+		if (tmax < 0) return false;
 	}
 
-	return hit_triangles;
+	t_min = tmin;
+	t_max = tmax;
+
+	return true;
 }

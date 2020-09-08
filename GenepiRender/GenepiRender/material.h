@@ -8,18 +8,26 @@ class material
 public:
     material() {}
 
-    material(vec3 color_parm, float roughness_parm) :
+    material(int &id) :
+        mat_id(id)
+    {
+    }
+
+    material(int& id, vec3 color_parm, float roughness_parm, float refraction_roughness_parm) :
         clr(color_parm),
-        roughness(roughness_parm)
+        roughness(roughness_parm),
+        refraction_roughness(refraction_roughness_parm),
+        mat_id(id)
     {
         has_clr_map = false;
         has_roughness_map = false;
         has_normal_map = false;
     }
 
-    material(const char *color_map_parm, float roughness_parm) :
+    material(int& id, const char *color_map_parm, float roughness_parm) :
         clr_map(color_map_parm),
-        roughness(roughness_parm)
+        roughness(roughness_parm),
+        mat_id(id)
     {
         has_clr_map = true;
         has_roughness_map = false;
@@ -27,9 +35,10 @@ public:
         //clr_buffer readimage()
     }
 
-    material(const char *color_map_parm, const char *roughness_map_parm) :
+    material(int& id, const char *color_map_parm, const char *roughness_map_parm) :
         clr_map(color_map_parm),
-        roughness_map(roughness_map_parm)
+        roughness_map(roughness_map_parm),
+        mat_id(id)
     {
         has_clr_map = true;
         has_roughness_map = true;
@@ -38,10 +47,11 @@ public:
         //roughness_buffer readimage()
     }
 
-    material(const char *color_map_parm, const char *roughness_map_parm, const char *normal_map_parm) :
+    material(int& id, const char *color_map_parm, const char *roughness_map_parm, const char *normal_map_parm) :
         clr_map(color_map_parm),
         roughness_map(roughness_map_parm),
-        normal_map(normal_map_parm)
+        normal_map(normal_map_parm),
+        mat_id(id)
     {
         has_clr_map = true;
         has_roughness_map = true;
@@ -52,19 +62,31 @@ public:
     }
 
 public:
+    int mat_id;
+
     vec3 clr;
     bool has_clr_map;
     const char *clr_map;
     OIIO::ImageBuf clr_buffer;
+    int clr_buf_w;
+    int clr_buf_h;
 
     float roughness;
     bool has_roughness_map;
     const char *roughness_map;
     OIIO::ImageBuf roughness_buffer;
+    int rgh_buf_w;
+    int rgh_buf_h;
+
+    float refraction_roughness;
+    vec3 refraction_color;
 
     bool has_normal_map;
     const char *normal_map;
     OIIO::ImageBuf normal_buffer;
+    int nml_buf_w;
+    int nml_buf_h;
+
 };
 
 
