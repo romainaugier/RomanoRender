@@ -1,4 +1,3 @@
-#pragma once
 #include <vector>
 #include <chrono>
 #include <iostream>
@@ -8,58 +7,12 @@
 #include "triangle.h"
 #include "objloader.h"
 #include "material.h"
-#include "ray.h"
-#include "bvh.h"
-
-class mesh
-{
-public:
-	mesh() {}
-	mesh(std::vector<triangle> mesh, vec3& _min, vec3& _max, int& mesh_id) :
-	id(mesh_id),
-	min(_min),
-	max(_max),
-	tris(mesh)
-	{}
-
-public:
-	int id;
-	vec3 min, max;
-	std::vector<triangle> tris;
-};
 
 
-float kInfinity = std::numeric_limits<float>::max();
-
-std::vector<triangle> scene_intersect(const ray& r, std::vector<node>& trees, int& id)
-{
-    std::vector<triangle> hit_triangles;
-    float t_min, t_max;
-    float t_near = kInfinity;
-
-    for (int i = 0; i < trees.size(); i++)
-    {
-        if (trees[i].bbox_intersect(r, t_min, t_max))
-        {
-            for (auto child : trees[i].nodes)
-            {
-                if (child->bbox_intersect(r, t_min, t_max))
-                {
-                    hit_triangles.insert(hit_triangles.begin(),
-                        child->tris.begin(),
-                        child->tris.end());
-                }
-            }
-        }
-    }
-    return hit_triangles;
-}
+static float infinity = std::numeric_limits<float>::max();
 
 
-float infinity = std::numeric_limits<float>::max();
-
-
-void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, const char* path)
+void load_scene(std::vector<mesh>& scene, std::vector<material>& materials)
 {
     std::cout << "Loading scene...." << std::endl;
     auto start = std::chrono::system_clock::now();
@@ -68,8 +21,7 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, cons
 
     float min_x = 0.0, max_x = 0.0, min_y = 0.0, max_y = 0.0, min_z = 0.0, max_z = 0.0;
 
-    bool loadout = loader.LoadFile(path);
-    std::cout << loader.LoadedMeshes.size() << "\n";
+    bool loadout = loader.LoadFile("D:/GenepiRender/Models/scene_drag.obj");
 
     std::vector<triangle> faces;
 
@@ -81,7 +33,6 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, cons
         for (auto object : loader.LoadedMeshes)
         {
             faces.clear();
-
 
             min_x = infinity;
             max_x = -infinity;
@@ -139,20 +90,10 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, cons
 
             std::random_device rd;
             std::mt19937 mt(rd());
-            std::uniform_real_distribution<float> dist(0.25f, 0.75f);
-            //vec3 rand_color(dist(mt));
-            vec3 rand_color(1.f);
+            std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+            vec3 rand_color(dist(mt), dist(mt), dist(mt));
 
-            //vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
-
-            float roughness = 1.0;
-            float refrac = 0.0;
-            //if (id == 0) roughness = 0.5;
-            if (id == 0) refrac = 1.0;
-            if (id == 2) rand_color = vec3(1.f, 0.f, 0.f);
-            if (id == 1) rand_color = vec3(0.f, 1.f, 0.f);
-
-            material new_material(id, rand_color, roughness, refrac);
+            material new_material(id, rand_color, 0.0f);
             mesh new_mesh(faces, min, max, id);
 
             id++;

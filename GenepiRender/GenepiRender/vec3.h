@@ -11,6 +11,12 @@ struct vec3
 	vec3(float X, float Y, float Z) :x(X), y(Y), z(Z) {}
 	vec3(float t) : x(t), y(t), z(t) {}
 
+	vec3 operator-()
+	{
+		return vec3(-x, -y, -z);
+	}
+
+
 	//functions
 	float length() const
 	{
@@ -83,6 +89,30 @@ vec3 operator/(int& t, vec3& n)
 	return vec3(t / n.x, t / n.y, t / n.z);
 }
 
+const bool operator==(const vec3& v0, const vec3& v1)
+{
+	if (v0.x == v1.x && v0.y == v1.y && v0.z == v1.z) return true;
+	else return false;
+}
+
+bool operator==(vec3& v0, vec3& v1)
+{
+	if (v0.x == v1.x && v0.y == v1.y && v0.z == v1.z) return true;
+	else return false;
+}
+
+vec3 operator+=(vec3& v0, vec3 v1)
+{
+	v0 = v0 + v1;
+	return v0;
+}
+
+bool operator>(vec3& v0, vec3& v1)
+{
+	if (v0.x > v1.x && v0.y > v1.y && v0.z > v1.z) return true;
+	else return false;
+}
+
 const float dot(const vec3& v1, const vec3& v2)
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
@@ -101,4 +131,9 @@ float length(vec3 v)
 vec3 sum(const vec3& v1, const vec3& v2, const vec3& v3)
 {
 	return vec3((v1.x + v2.x + v3.x) / 3, (v1.y + v2.y + v3.y) / 3, (v1.z + v2.z + v3.z) / 3);
+}
+
+float dist(vec3& a, vec3& b)
+{
+	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
 }
