@@ -33,9 +33,6 @@
     <ClInclude Include="matrix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bvh.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="tiles.h">
       <Filter>Header Files</Filter>
     </ClInclude>
