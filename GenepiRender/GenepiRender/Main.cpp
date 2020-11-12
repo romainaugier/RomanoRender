@@ -26,10 +26,10 @@
 #include "utils.h"
 
 
-const int xres = 500;
-const int yres = 500;
+const int xres = 1000;
+const int yres = 1000;
 const int tile_number = 8;
-const int samples = 64;
+const int samples = 4;
 const int bounces = 3;
 float variance_threshold = 0.001;
 
@@ -88,8 +88,10 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
 
     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
     {
-        color = vec3(1.f);
+        std::cout << rayhit.hit.geomID << "\n";
+        return vec3(1.f);
     }
+    else return color;
         /*
         hit = trace(r, hit_tris, t, hit, u, v);
 
@@ -208,11 +210,10 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
             
         }
     }*/
-    return color;    
 }
 
 
-static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, RTCScene& g_scene, std::vector<material>& mats, std::vector<point_light>& lights)
+static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, RTCScene g_scene, std::vector<material>& mats, std::vector<point_light>& lights)
 {
     float fov = 50;
     float scale = tan(deg2rad(fov * 0.5));
@@ -292,24 +293,10 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, R
 }
 
 
-extern "C" void device_init(char* cfg)
-{
-     std::vector<mesh> scene;
-    std::vector<material> materials;
-
-    const char* path = "D:/GenepiRender/Models/sphere.obj";
-    RTCScene g_scene = nullptr;
-    RTCDevice g_device = initializeDevice();
-
-    load_scene(scene, materials, g_scene, g_device, path);
-    rtcCommitScene(g_scene);
-}
-
-
 int main()
 {
     const char* filename = "C:/Users/augie/Desktop/test.png";
-    const char* path = "D:/GenepiRender/Models/sphere.obj";
+    const char* path = "D:/GenepiRender/Models/triangle.obj";
     const int channels = 3; //rbg
 
     OIIO::ImageSpec spec(xres, yres, channels, OIIO::TypeDesc::FLOAT);
@@ -333,14 +320,15 @@ int main()
     lights.push_back(pt_light3);
     //lights.push_back(pt_light4);
 
-
-    RTCScene g_scene = nullptr;
     RTCDevice g_device = initializeDevice();
+    RTCScene g_scene = rtcNewScene(g_device);
 
     std::vector<mesh> scene;
     std::vector<material> materials;
     load_scene(scene, materials, g_scene, g_device, path);
     rtcCommitScene(g_scene);
+
+    std::cout << g_scene << "\n";
 
     int size = 0;
 
@@ -354,8 +342,8 @@ int main()
 
     for (auto& tile : tiles)
     {
-        //futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights));
-        render(&tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights);
+        futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights));
+        //render(&tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights);
     }
 
 

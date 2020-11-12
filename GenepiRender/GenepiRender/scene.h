@@ -69,13 +69,20 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, RTCS
     {
         int id = 0;
         for (auto object : loader.LoadedMeshes)
-        {
-            faces.clear();
-            
+        {   
             RTCGeometry geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
-            triangle* triangles = (triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(triangle), object.Indices.size() / 3);
-
+            vec3* vertices = (vec3*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(vec3), object.Vertices.size());
+            auto triangles = (triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(triangle), object.Indices.size() / 3);
+            std::cout << object.Indices.size() / 3 << "\n";
+            
             int tri = 0;
+
+            for (int i = 0; i < object.Vertices.size(); i++)
+            {
+                vertices[i].x = object.Vertices[i].Position.X;
+                vertices[i].y = object.Vertices[i].Position.Y;
+                vertices[i].z = object.Vertices[i].Position.Z;
+            }
 
             //load mesh faces into a mesh vector
             for (int i = 0; i < object.Indices.size(); i += 3)
@@ -84,9 +91,9 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, RTCS
                 int vtx_idx1 = object.Indices[i + 1];
                 int vtx_idx2 = object.Indices[i + 2];
 
-                triangles[tri].vtx0 = vec3(object.Vertices[vtx_idx0].Position.X, object.Vertices[vtx_idx0].Position.Y, object.Vertices[vtx_idx0].Position.Z);
-                triangles[tri].vtx1 = vec3(object.Vertices[vtx_idx1].Position.X, object.Vertices[vtx_idx1].Position.Y, object.Vertices[vtx_idx1].Position.Z);
-                triangles[tri].vtx2 = vec3(object.Vertices[vtx_idx2].Position.X, object.Vertices[vtx_idx2].Position.Y, object.Vertices[vtx_idx2].Position.Z);
+                triangles[tri].v0 = vec3(object.Vertices[vtx_idx0].Position.X, object.Vertices[vtx_idx0].Position.Y, object.Vertices[vtx_idx0].Position.Z);
+                triangles[tri].v1 = vec3(object.Vertices[vtx_idx1].Position.X, object.Vertices[vtx_idx1].Position.Y, object.Vertices[vtx_idx1].Position.Z);
+                triangles[tri].v2 = vec3(object.Vertices[vtx_idx2].Position.X, object.Vertices[vtx_idx2].Position.Y, object.Vertices[vtx_idx2].Position.Z);
 
                 triangles[tri].n0 = vec3(object.Vertices[vtx_idx0].Normal.X, object.Vertices[vtx_idx0].Normal.Y, object.Vertices[vtx_idx0].Normal.Z);
                 triangles[tri].n1 = vec3(object.Vertices[vtx_idx1].Normal.X, object.Vertices[vtx_idx1].Normal.Y, object.Vertices[vtx_idx1].Normal.Z);
@@ -103,32 +110,11 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, RTCS
                 tri++;
             }
 
-            std::random_device rd;
-            std::mt19937 mt(rd());
-            std::uniform_real_distribution<float> dist(0.25f, 0.75f);
-            //vec3 rand_color(dist(mt));
-            vec3 rand_color(1.f);
-
-            //vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
-
-            float roughness = 1.0;
-            float refrac = 0.0;
-            //if (id == 0) roughness = 0.5;
-            if (id == 0) refrac = 1.0;
-            if (id == 2) rand_color = vec3(1.f, 0.f, 0.f);
-            if (id == 1) rand_color = vec3(0.f, 1.f, 0.f);
-
-            material new_material(id, rand_color, roughness, refrac);
-            mesh new_mesh(faces, min, max, id);
-
             id++;
 
             rtcCommitGeometry(geo);
             unsigned int geoID = rtcAttachGeometry(g_scene, geo);
             rtcReleaseGeometry(geo);
-
-            scene.push_back(new_mesh);
-            materials.push_back(new_material);
         }
     }
 
@@ -136,3 +122,25 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, RTCS
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Scene loaded in " << elapsed.count() << " seconds" << std::endl;
 }
+
+/*
+std::random_device rd;
+std::mt19937 mt(rd());
+std::uniform_real_distribution<float> dist(0.25f, 0.75f);
+//vec3 rand_color(dist(mt));
+vec3 rand_color(1.f);
+
+//vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
+
+float roughness = 1.0;
+float refrac = 0.0;
+//if (id == 0) roughness = 0.5;
+if (id == 0) refrac = 1.0;
+if (id == 2) rand_color = vec3(1.f, 0.f, 0.f);
+if (id == 1) rand_color = vec3(0.f, 1.f, 0.f);
+
+material new_material(id, rand_color, roughness, refrac);
+mesh new_mesh(faces, min, max, id);
+scene.push_back(new_mesh);
+materials.push_back(new_material);
+*/
