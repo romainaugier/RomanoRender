@@ -140,7 +140,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="bvh.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="material.h" />

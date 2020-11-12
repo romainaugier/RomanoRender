@@ -1,5 +1,9 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
+
+#include <embree3/rtcore.h>
+#include <embree3/rtcore_ray.h>
+
 #include <iostream>
 #include <vector>
 #include <random>
@@ -15,7 +19,6 @@
 #include "triangle.h"
 #include "camera.h"
 #include "matrix.h"
-#include "bvh.h"
 #include "tiles.h"
 #include "scene.h"
 #include "material.h"
@@ -26,7 +29,7 @@
 const int xres = 500;
 const int yres = 500;
 const int tile_number = 8;
-const int samples = 16;
+const int samples = 64;
 const int bounces = 3;
 float variance_threshold = 0.001;
 
@@ -57,36 +60,37 @@ const triangle * trace(const ray& r, std::vector<triangle>& tris, float &t_near,
 }
 
 
-vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material>& mats, std::vector<node>& trees, std::vector<point_light>& lights, int depth)
+vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material>& mats, RTCScene& g_scene, std::vector<point_light>& lights, int depth)
 {
     if (depth == 0) return vec3(0.f);
     
-    const triangle* hit = nullptr;
-    const triangle* new_hit = nullptr;
+    RTCIntersectContext context;
+    rtcInitIntersectContext(&context);
 
-    vec3 hit_pos;
-    vec3 hit_normal;
-    vec3 hit_geometric_normal;
-    vec3 hit_tex;
-    vec3 new_color;
+    RTCRayHit rayhit;
+    rayhit.ray.org_x = r.origin().x;
+    rayhit.ray.org_y = r.origin().y;
+    rayhit.ray.org_z = r.origin().z;
+    rayhit.ray.dir_x = r.direction().x;
+    rayhit.ray.dir_y = r.direction().y;
+    rayhit.ray.dir_z = r.direction().z;
+    rayhit.ray.tnear = 0;
+    rayhit.ray.tfar = std::numeric_limits<float>::infinity();
+    rayhit.ray.mask = -1;
+    rayhit.ray.flags = 0;
+    rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+    rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 
-    float hit_roughness;
-    float hit_refraction;
+    //hit_tris = scene_intersect(r, trees, id);
+    // intersect ray with scene
+    
+    rtcIntersect1(g_scene, &context, &rayhit);
 
-
-    color = vec3(0.f);
-
-    int hit_mat_id;
-    int id = 0;
-    float t, t1;
-
-    std::vector<triangle> hit_tris;
-    std::vector<triangle> new_hit_tris;
-
-    hit_tris = scene_intersect(r, trees, id);
-
-    if (hit_tris.size() > 0)
+    if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
     {
+        color = vec3(1.f);
+    }
+        /*
         hit = trace(r, hit_tris, t, hit, u, v);
 
         if (hit != nullptr)
@@ -103,7 +107,7 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
             new_color = mats[hit_mat_id].clr;
 
 
-            /*
+            
             if (mats[hit_mat_id].has_clr_map)
             {
                 int xmod = modulo(hit_tex.x) * (mats[hit_mat_id].clr_buf_w / 2);
@@ -120,7 +124,7 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
                 int xmod = modulo(hit_tex.x) * (mats[hit_mat_id].clr_buf_w / 2);
                 int ymod = modulo(hit_tex.y) * mats[hit_mat_id].clr_buf_h;
                 hit_normal = get_tex_pixel(mats[hit_mat_id].normal_buffer, xmod, ymod) * 1.5;
-            }*/
+            }
 
             
             if (hit_roughness < 1.0)
@@ -203,12 +207,12 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
             color += cast_ray(random_ray, color, u, v, mats, trees, lights, depth - 1) * new_color;
             
         }
-    }
+    }*/
     return color;    
 }
 
 
-static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, std::vector<node>& trees, std::vector<material>& mats, std::vector<point_light>& lights)
+static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, RTCScene& g_scene, std::vector<material>& mats, std::vector<point_light>& lights)
 {
     float fov = 50;
     float scale = tan(deg2rad(fov * 0.5));
@@ -270,7 +274,7 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, s
                 vec3 dir(rayDir.x, rayDir.y, rayDir.z);
                 ray ray(campos, dir);
 
-                col += cast_ray(ray, col, u, v, mats, trees, lights, depth) / samples;
+                col += cast_ray(ray, col, u, v, mats, g_scene, lights, depth) / samples;
             }
 
             pixel[0] = pow(col.x, 1.0 / 2.2);
@@ -288,9 +292,24 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, s
 }
 
 
+extern "C" void device_init(char* cfg)
+{
+     std::vector<mesh> scene;
+    std::vector<material> materials;
+
+    const char* path = "D:/GenepiRender/Models/sphere.obj";
+    RTCScene g_scene = nullptr;
+    RTCDevice g_device = initializeDevice();
+
+    load_scene(scene, materials, g_scene, g_device, path);
+    rtcCommitScene(g_scene);
+}
+
+
 int main()
 {
     const char* filename = "C:/Users/augie/Desktop/test.png";
+    const char* path = "D:/GenepiRender/Models/sphere.obj";
     const int channels = 3; //rbg
 
     OIIO::ImageSpec spec(xres, yres, channels, OIIO::TypeDesc::FLOAT);
@@ -299,7 +318,6 @@ int main()
 
     OIIO::ROI roi(0, xres, 0, yres, 0, 3);
 
-    
     std::vector<tile> tiles = generate_tiles(tile_number, xres, yres, 3);
 
     std::vector<point_light> lights;
@@ -315,39 +333,14 @@ int main()
     lights.push_back(pt_light3);
     //lights.push_back(pt_light4);
 
-    const char* path = "D:/GenepiRender/Models/sphere.obj";
+
+    RTCScene g_scene = nullptr;
+    RTCDevice g_device = initializeDevice();
 
     std::vector<mesh> scene;
     std::vector<material> materials;
-    load_scene(scene, materials, path);
-
-    auto start_arts = std::chrono::system_clock::now();
-    std::cout << "Building acceleration structure..." << std::endl;
-
-    std::vector<node> scene_tree;
-    int id = 0;
-
-    for (auto& obj : scene)
-    {
-        node tree(obj.min, obj.max, vec3(1.f), id);
-        id++;
-
-        if (obj.tris.size() > 100)
-            divide(&tree, 4, 0);
-        /*if (obj.tris.size() < 10000 && obj.tris.size() > 1000)
-            divide(&tree, 4, 0);
-        if (obj.tris.size() < 1000 && obj.tris.size() > 100)
-            divide(&tree, 2, 0);*/
-        else divide(&tree, 1, 1);
-
-        push_triangles(&tree, obj.tris);
-
-        scene_tree.push_back(tree);
-    }
-
-    auto end_arts = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_arts = end_arts - start_arts;
-    std::cout << "Acceleration structure built in " << elapsed_arts.count() << " seconds" << std::endl;
+    load_scene(scene, materials, g_scene, g_device, path);
+    rtcCommitScene(g_scene);
 
     int size = 0;
 
@@ -361,8 +354,8 @@ int main()
 
     for (auto& tile : tiles)
     {
-        futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, scene_tree, materials, lights));
-        //render(&tile, tile.xstart, tile.xend, tile.ystart, tile.yend, scene_tree, materials, lights);
+        //futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights));
+        render(&tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights);
     }
 
 

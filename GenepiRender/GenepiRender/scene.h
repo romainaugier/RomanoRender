@@ -4,12 +4,13 @@
 #include <iostream>
 #include <random>
 
+#include <embree3/rtcore.h>
+
 #include "scene.h"
 #include "triangle.h"
 #include "objloader.h"
 #include "material.h"
 #include "ray.h"
-#include "bvh.h"
 
 class mesh
 {
@@ -28,52 +29,41 @@ public:
 	std::vector<triangle> tris;
 };
 
+float infinity = std::numeric_limits<float>::infinity();
 
-float kInfinity = std::numeric_limits<float>::max();
 
-std::vector<triangle> scene_intersect(const ray& r, std::vector<node>& trees, int& id)
+void errorFunction(void* userPtr, enum RTCError error, const char* str)
 {
-    std::vector<triangle> hit_triangles;
-    float t_min, t_max;
-    float t_near = kInfinity;
-
-    for (int i = 0; i < trees.size(); i++)
-    {
-        if (trees[i].bbox_intersect(r, t_min, t_max))
-        {
-            for (auto child : trees[i].nodes)
-            {
-                if (child->bbox_intersect(r, t_min, t_max))
-                {
-                    hit_triangles.insert(hit_triangles.begin(),
-                        child->tris.begin(),
-                        child->tris.end());
-                }
-            }
-        }
-    }
-    return hit_triangles;
+    printf("error %d: %s\n", error, str);
 }
 
 
-float infinity = std::numeric_limits<float>::max();
+RTCDevice initializeDevice()
+{
+    RTCDevice device = rtcNewDevice(NULL);
+
+    if (!device)
+        printf("error %d: cannot create device\n", rtcGetDeviceError(NULL));
+
+    rtcSetDeviceErrorFunction(device, errorFunction, NULL);
+    return device;
+}
 
 
-void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, const char* path)
+void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, RTCScene g_scene, RTCDevice g_device, const char* path)
 {
     std::cout << "Loading scene...." << std::endl;
     auto start = std::chrono::system_clock::now();
 
     objl::Loader loader;
 
-    float min_x = 0.0, max_x = 0.0, min_y = 0.0, max_y = 0.0, min_z = 0.0, max_z = 0.0;
-
     bool loadout = loader.LoadFile(path);
     std::cout << loader.LoadedMeshes.size() << "\n";
 
     std::vector<triangle> faces;
+    vec3 min(0.0f), max(0.0f);  
 
-    vec3 min(0.0f), max(0.0f);
+    int tri_id = 0;
 
     if (loadout)
     {
@@ -81,37 +71,11 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, cons
         for (auto object : loader.LoadedMeshes)
         {
             faces.clear();
+            
+            RTCGeometry geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+            triangle* triangles = (triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(triangle), object.Indices.size() / 3);
 
-
-            min_x = infinity;
-            max_x = -infinity;
-            min_y = infinity;
-            max_y = -infinity;
-            min_z = infinity;
-            max_z = -infinity;
-
-
-            for (int j = 0; j < object.Vertices.size(); j++)
-            {
-                float px = object.Vertices[j].Position.X;
-                float py = object.Vertices[j].Position.Y;
-                float pz = object.Vertices[j].Position.Z;
-
-                if (px < min_x) min_x = px;
-                if (px > max_x) max_x = px;
-                if (py < min_y) min_y = py;
-                if (py > max_y) max_y = py;
-                if (pz < min_z) min_z = pz;
-                if (pz > max_z) max_z = pz;
-            }
-
-            min.x = min_x;
-            min.y = min_y;
-            min.z = min_z;
-
-            max.x = max_x;
-            max.y = max_y;
-            max.z = max_z;
+            int tri = 0;
 
             //load mesh faces into a mesh vector
             for (int i = 0; i < object.Indices.size(); i += 3)
@@ -120,21 +84,23 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, cons
                 int vtx_idx1 = object.Indices[i + 1];
                 int vtx_idx2 = object.Indices[i + 2];
 
-                vec3 vtx_0(object.Vertices[vtx_idx0].Position.X, object.Vertices[vtx_idx0].Position.Y, object.Vertices[vtx_idx0].Position.Z);
-                vec3 vtx_1(object.Vertices[vtx_idx1].Position.X, object.Vertices[vtx_idx1].Position.Y, object.Vertices[vtx_idx1].Position.Z);
-                vec3 vtx_2(object.Vertices[vtx_idx2].Position.X, object.Vertices[vtx_idx2].Position.Y, object.Vertices[vtx_idx2].Position.Z);
+                triangles[tri].vtx0 = vec3(object.Vertices[vtx_idx0].Position.X, object.Vertices[vtx_idx0].Position.Y, object.Vertices[vtx_idx0].Position.Z);
+                triangles[tri].vtx1 = vec3(object.Vertices[vtx_idx1].Position.X, object.Vertices[vtx_idx1].Position.Y, object.Vertices[vtx_idx1].Position.Z);
+                triangles[tri].vtx2 = vec3(object.Vertices[vtx_idx2].Position.X, object.Vertices[vtx_idx2].Position.Y, object.Vertices[vtx_idx2].Position.Z);
 
-                vec3 n_0(object.Vertices[vtx_idx0].Normal.X, object.Vertices[vtx_idx0].Normal.Y, object.Vertices[vtx_idx0].Normal.Z);
-                vec3 n_1(object.Vertices[vtx_idx1].Normal.X, object.Vertices[vtx_idx1].Normal.Y, object.Vertices[vtx_idx1].Normal.Z);
-                vec3 n_2(object.Vertices[vtx_idx2].Normal.X, object.Vertices[vtx_idx2].Normal.Y, object.Vertices[vtx_idx2].Normal.Z);
+                triangles[tri].n0 = vec3(object.Vertices[vtx_idx0].Normal.X, object.Vertices[vtx_idx0].Normal.Y, object.Vertices[vtx_idx0].Normal.Z);
+                triangles[tri].n1 = vec3(object.Vertices[vtx_idx1].Normal.X, object.Vertices[vtx_idx1].Normal.Y, object.Vertices[vtx_idx1].Normal.Z);
+                triangles[tri].n2 = vec3(object.Vertices[vtx_idx2].Normal.X, object.Vertices[vtx_idx2].Normal.Y, object.Vertices[vtx_idx2].Normal.Z);
 
-                vec3 t_0(object.Vertices[vtx_idx0].TextureCoordinate.X, object.Vertices[vtx_idx0].TextureCoordinate.Y, 0.0f);
-                vec3 t_1(object.Vertices[vtx_idx1].TextureCoordinate.X, object.Vertices[vtx_idx1].TextureCoordinate.Y, 0.0f);
-                vec3 t_2(object.Vertices[vtx_idx2].TextureCoordinate.X, object.Vertices[vtx_idx2].TextureCoordinate.Y, 0.0f);
+                triangles[tri].t0 = vec3(object.Vertices[vtx_idx0].TextureCoordinate.X, object.Vertices[vtx_idx0].TextureCoordinate.Y, 0.0f);
+                triangles[tri].t1 = vec3(object.Vertices[vtx_idx1].TextureCoordinate.X, object.Vertices[vtx_idx1].TextureCoordinate.Y, 0.0f);
+                triangles[tri].t2 = vec3(object.Vertices[vtx_idx2].TextureCoordinate.X, object.Vertices[vtx_idx2].TextureCoordinate.Y, 0.0f);
 
-                triangle t0(vtx_0, vtx_1, vtx_2, n_0, n_1, n_2, t_0, t_1, t_2, id, sum(n_0, n_1, n_2));
+                triangles[tri].tri_id = tri_id;
+                triangles[tri].mat_id = id;
 
-                faces.push_back(t0);
+                tri_id++;
+                tri++;
             }
 
             std::random_device rd;
@@ -157,10 +123,15 @@ void load_scene(std::vector<mesh>& scene, std::vector<material>& materials, cons
 
             id++;
 
+            rtcCommitGeometry(geo);
+            unsigned int geoID = rtcAttachGeometry(g_scene, geo);
+            rtcReleaseGeometry(geo);
+
             scene.push_back(new_mesh);
             materials.push_back(new_material);
         }
     }
+
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Scene loaded in " << elapsed.count() << " seconds" << std::endl;
