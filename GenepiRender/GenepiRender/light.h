@@ -1,70 +1,75 @@
 #pragma once
 #include "vec3.h"
 
-class light
+/*
+light types :
+- point light
+- directionnal light
+- area light
+- ambient light
+- spot light
+*/
+
+struct light
 {
 public:
+	int type;
 	float intensity;
 	vec3 color;
 	int temperature;
 	vec3 position;
+	vec3 direction;
 public:
 	light() {}
-	light(float int_, vec3 col) :
+
+	light(int _type, float int_, vec3 col, vec3 pos) :
+		type(_type),
 		intensity(int_),
-		color(col)
-	{}
+		color(col),
+		position(pos),
+		direction(pos)
+		{}
 
-	vec3 light_intensity(float d);
-};
-
-
-class ambient_light : public light
-{
-public:
-	ambient_light() {}
-	ambient_light(float _int, vec3 col)
-	{
-		intensity = _int;
-		color = col;
-	}
-};
-
-
-class point_light : public light
-{
-public:
-	point_light() {}
-	point_light(float _int, vec3 col, vec3 pos) 
-	{
-		intensity = _int;
-		color = col;
-		position = pos;
-	}
-
-	vec3 light_intensity(float d)
+	/*light(int _type, float int_, vec3 col, vec3 dir) :
+		type(_type),
+		intensity(int_),
+		color(col),
+		direction(dir) {}
+	*/
+	vec3 point_light_intensity(float d)
 	{
 		return intensity * color / (4 * M_PI * (d * d));
-		/*
-		
-		*/
-
 	}
-
 };
 
 
-class directionnal_light : public light
+vec3 return_raydir(light& light, vec3& hit_pos)
 {
-public:
-	directionnal_light() {}
-	directionnal_light(float _int, vec3 col, vec3 dir) :
-	direction(dir)
+	vec3 dir(0.0f);
+
+	if (light.type == 0)
 	{
-		intensity = _int;
-		color = col;
+		dir = light.position - hit_pos;
 	}
 
-public:
-	vec3 direction;
-};
+	if (light.type == 1)
+	{
+		dir = -light.direction;
+	}
+
+	return dir;
+}
+
+
+vec3 return_light_int(light& light, float& d)
+{
+	if (light.type == 0)
+	{
+		return light.point_light_intensity(d);
+	}
+
+	else
+	{
+		return light.intensity * light.color;
+	}
+}

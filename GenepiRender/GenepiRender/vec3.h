@@ -1,10 +1,10 @@
 #pragma once
 #include <iostream>
 
-struct vec3
+struct alignas(16) vec3
 {
 	//3 dimensions
-	float x, y, z;
+	float x, y, z, a;
 
 	//constructors
 	vec3() {}
