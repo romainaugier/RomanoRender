@@ -2,6 +2,34 @@
 #include <vector>
 #include <random>
 
+#define _CRT_SECURE_NO_WARNINGS
+
+struct Vertex { float x, y, z, r; };
+struct Triangle { int v0, v1, v2; };
+
+#include <embree3/rtcore.h>
+
+void errorFunction(void* userPtr, enum RTCError error, const char* str)
+{
+    printf("error %d: %s\n", error, str);
+}
+
+RTCDevice initializeDevice()
+{
+    RTCDevice device = rtcNewDevice(NULL);
+
+    if (!device)
+        printf("error %d: cannot create device\n", rtcGetDeviceError(NULL));
+
+    rtcSetDeviceErrorFunction(device, errorFunction, NULL);
+    return device;
+}
+
+extern "C" void abort();
+extern "C" void exit(int);
+extern "C" int puts(const char* str);
+extern "C" int putchar(int character);
+
 
 vec3 generate_random_vector(float min, float max)
 {
@@ -132,4 +160,9 @@ float estimate_sample_variance(vec3 samples[], int n)
     return var_sum / 3;
 }
 
+
+inline vec3 face_forward(const vec3& dir, const vec3& _Ng) {
+    const vec3 Ng = _Ng;
+    return dot(dir, Ng) < 0.0f ? Ng : Ng * -1;
+}
 
