@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <random>
+#include "matrix.h"
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -92,9 +93,26 @@ lerp(T& a, T& b, float& t)
 }
 
 
+vec3 random_ray_in_hemisphere(vec3& hit_normal)
+{
+    double r1 = generate_random_float(0.0, 1.0);
+    double r2 = generate_random_float(0.0, 1.0);
+
+    vec3 rand_dir_local(cos(2 * M_PI * r1) * sqrt(1 - r2), sin(2 * M_PI * r1) * sqrt(1 - r2), sqrt(1 - r1));
+    vec3 rand(generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5);
+
+    vec3 tan1 = cross(hit_normal, rand);
+    vec3 tan2 = cross(tan1.normalize(), hit_normal);
+
+    vec3 rand_ray_dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
+
+    return rand_ray_dir;
+}
+
+
 vec3 reflect(vec3& i, vec3& n, float& R)
 {
-    vec3 random = generate_random_vector(-1.0, 1.0);
+    vec3 random = random_ray_in_hemisphere(n);
     vec3 r = i - 2 * dot(i, n) * n + lerp(vec3(0), random, R);
     return r.normalize();
 }
@@ -121,7 +139,8 @@ vec3 refract(vec3& i, vec3& n, float ior)
 
     if (radical > 0.0)
     {
-        T = (n1 / n2) * (i.normalize() - dt * n_t) - n_t * sqrt(radical);
+        //T = (n1 / n2) * (i.normalize() - dt * n_t) - n_t * sqrt(radical);
+        T = n_ior * i + (n_ior * -dt - sqrt(radical)) * n_t;
     }
     return T;
 }
@@ -166,3 +185,40 @@ inline vec3 face_forward(const vec3& dir, const vec3& _Ng) {
     return dot(dir, Ng) < 0.0f ? Ng : Ng * -1;
 }
 
+
+float invsqrt(float number) 
+{
+    union {
+        float f;
+        uint32_t i;
+    } conv;
+
+    float x2;
+    const float threehalfs = 1.5F;
+
+    x2 = number * 0.5F;
+    conv.f = number;
+    conv.i = 0x5f3759df - (conv.i >> 1);
+    conv.f = conv.f * (threehalfs - (x2 * conv.f * conv.f));
+    return conv.f;
+}
+
+
+float IntegrateEdge(vec3 v1, vec3 v2)
+{
+    float cosTheta = dot(v1, v2);
+    if (cosTheta > 0.99999)
+        return 0.0;
+
+    float theta = acos(cosTheta);
+    float res = cross(v1, v2).z * theta * invsqrt(1.0 - cosTheta * cosTheta);
+
+    return res;
+}
+
+/*
+vec3 mul(matrix3f& m, vec3& v)
+{
+    return vec3(m[0][0] * v.x + m[0][1] * v.x + m[0][2] * v.x, m[1][0] * v.y + m[1][1] * v.y + m[1][2] * v.y, m[2][0] * v.z + m[2][1] * v.z + m[2][2] * v.z);
+}
+*/
