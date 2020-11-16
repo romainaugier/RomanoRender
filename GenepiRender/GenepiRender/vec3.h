@@ -86,7 +86,7 @@ const vec3 operator/(const vec3& vec, const float& t)
 
 vec3 operator/(int& t, vec3& n)
 {
-	return vec3(t / n.x, t / n.y, t / n.z);
+	return vec3(n.x / t, n.y / t, n.z / t);
 }
 
 const bool operator==(const vec3& v0, const vec3& v1)
@@ -136,4 +136,32 @@ vec3 sum(const vec3& v1, const vec3& v2, const vec3& v3)
 float dist(vec3& a, vec3& b)
 {
 	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+}
+
+vec3 powvec3(vec3 v, float p)
+{
+	return vec3(pow(v.x, p), pow(v.y, p), pow(v.z, p));
+}
+
+vec3 rotation_y(vec3 v, float a)
+{
+	vec3 r(0.0f);
+	r.x = v.x * cos(a) + v.z * sin(a);
+	r.y = v.y;
+	r.z = -v.x * sin(a) + v.z * cos(a);
+	return r;
+}
+
+vec3 rotation_z(vec3 v, float a)
+{
+	vec3 r(0.0f);
+	r.x = v.x * cos(a) - v.y * sin(a);
+	r.y = v.x * sin(a) + v.y * cos(a);
+	r.z = v.z;
+	return r;
+}
+
+vec3 rotation_yz(vec3 v, float ay, float az)
+{
+	return rotation_z(rotation_y(v, ay), az);
 }

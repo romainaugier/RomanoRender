@@ -5,12 +5,12 @@
 light types :
 - point light
 - directionnal light
-- area light
+- square light
 - ambient light
 - spot light
 */
 
-struct light
+class light
 {
 public:
 	int type;
@@ -18,7 +18,18 @@ public:
 	vec3 color;
 	int temperature;
 	vec3 position;
+
+	//directional light
 	vec3 direction;
+	float angle;
+
+	//square lights
+	bool visible;
+	float size_x;
+	float size_y;
+	vec3 orientation;
+	vec3 v0, v1, v2, v3;
+
 public:
 	light() {}
 
@@ -30,12 +41,35 @@ public:
 		direction(pos)
 		{}
 
-	/*light(int _type, float int_, vec3 col, vec3 dir) :
+	light(int _type, float int_, vec3 col, vec3 dir, float angle) :
 		type(_type),
 		intensity(int_),
 		color(col),
-		direction(dir) {}
-	*/
+		direction(dir),
+		angle(angle)
+	{}
+
+	light(int _type, bool v, float int_, vec3 col, vec3 pos, float sizex, float sizey, vec3 o) :
+		type(_type),
+		visible(v),
+		intensity(int_),
+		color(col),
+		position(pos),
+		orientation(o),
+		size_x(sizex),
+		size_y(sizey)
+		{
+		v0 = position;
+
+		vec3 up(0, 1, 0);
+		float d = dot(o, vec3(0, 1, 0));
+		if (d > 0.9f | d < -0.1f) up = vec3(1, 0, 0);
+
+		v1 = v0 + cross(o, up).normalize() * sizex;
+		v2 = v0 - cross(o, cross(o, up)).normalize() * sizey;
+		v3 = v1 + v2 - v0;
+		}
+	
 	vec3 point_light_intensity(float d)
 	{
 		return intensity * color / (4 * M_PI * (d * d));
@@ -43,7 +77,7 @@ public:
 };
 
 
-vec3 return_raydir(light& light, vec3& hit_pos)
+vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal)
 {
 	vec3 dir(0.0f);
 
@@ -54,7 +88,40 @@ vec3 return_raydir(light& light, vec3& hit_pos)
 
 	if (light.type == 1)
 	{
-		dir = -light.direction;
+		vec3 rand = random_ray_in_hemisphere(hit_normal);
+		float angle = light.angle;
+
+		dir = lerp(-light.direction, rand, angle);
+	}
+
+	if (light.type == 2)
+	{
+		float w0 = generate_random_float(0.f, 1.f);
+		float w1 = generate_random_float(0.f, 1.f);
+		float difw0 = 1 - w0;
+		float difw1 = 1 - w1;
+		//float w2 = generate_random_float(0.f, 1.f);
+		//float w3 = generate_random_float(0.f, 1.f);
+		
+		vec3 position(0.0f);
+
+		dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4 - hit_pos;
+
+		dir = dir.normalize();
+	}
+
+	if (light.type == 3)
+	{
+		double r1 = generate_random_float(0.0, 1.0);
+		double r2 = generate_random_float(0.0, 1.0);
+
+		vec3 rand_dir_local(cos(2 * M_PI * r1) * sqrt(1 - r2), sin(2 * M_PI * r1) * sqrt(1 - r2), sqrt(1 - r1));
+		vec3 rand(generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5);
+
+		vec3 tan1 = cross(hit_normal, rand);
+		vec3 tan2 = cross(tan1.normalize(), hit_normal);
+
+		dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
 	}
 
 	return dir;
@@ -67,7 +134,12 @@ vec3 return_light_int(light& light, float& d)
 	{
 		return light.point_light_intensity(d);
 	}
-
+	
+	if (light.type == 2)
+	{
+		return light.point_light_intensity(d);
+	}
+	
 	else
 	{
 		return light.intensity * light.color;

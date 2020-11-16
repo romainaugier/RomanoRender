@@ -13,6 +13,13 @@ public:
     {
     }
 
+    material(int& id, vec3 color_parm, vec3 n, bool is_light) :
+        clr(color_parm),
+        normal(n),
+        islight(is_light)
+    {        
+    }
+
     material(int& id, vec3 color_parm, float roughness_parm, float refraction_roughness_parm) :
         clr(color_parm),
         roughness(roughness_parm),
@@ -63,6 +70,8 @@ public:
 
 public:
     int mat_id;
+    bool islight;
+    vec3 normal;
 
     vec3 clr;
     bool has_clr_map;

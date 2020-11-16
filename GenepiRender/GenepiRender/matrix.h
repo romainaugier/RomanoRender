@@ -1,46 +1,9 @@
-//[header]
-// This program illustrates how the concept of vector and matrix can be implemented
-// in C++. This is a light version of the implementation. It contains the most
-// essential methods to manipulate vectors and matrices. It should be enough
-// for most projects. Vectors and matrices are really the alphabet as we said
-// in the lesson of any graphics application. It's really important you feel
-// confortable with these techniques especially with the concepts of
-// normalizing vectors, computing their length, computing the dot and cross products
-// of two vectors, and the point- and vector-matrix multiplication (and knowing
-// the difference between the two).
-//[/header]
-//[compile]
-// c++ geometry.cpp  -o geometry -std=c++11
-//[/compile]
-//[ignore]
-// Copyright (C) 2012  www.scratchapixel.com
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//[/ignore]
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
 #include <iomanip>
-//[comment]
-// Implementation of a generic vector class - it will be used to deal with 3D points, vectors and normals.
-// The class is implemented as a template. While it may complicate the code a bit, it gives us
-// the flexibility later, to specialize the type of the coordinates into anything we want.
-// For example: Vec3f if we want the coordinates to be floats or Vec3i if we want the coordinates to be integers.
-//
-// Vec3 is a standard/common way of naming vectors, points, etc. The OpenEXR and Autodesk libraries
-// use this convention for instance.
-//[/comment]
+#pragma once
+
 template<typename T>
 class Vec3
 {
@@ -76,13 +39,7 @@ public:
     {
         return sqrt(norm());
     }
-    //[comment]
-    // The next two operators are sometimes called access operators or
-    // accessors. The Vec coordinates can be accessed that way v[0], v[1], v[2],
-    // rather than using the more traditional form v.x, v.y, v.z. This useful
-    // when vectors are used in loops: the coordinates can be accessed with the
-    // loop index (e.g. v[i]).
-    //[/comment]
+
     const T& operator [] (uint8_t i) const { return (&x)[i]; }
     T& operator [] (uint8_t i) { return (&x)[i]; }
     Vec3& normalize()
@@ -104,21 +61,11 @@ public:
     T x, y, z;
 };
 
-//[comment]
-// Now you can specialize the class. We are just showing two examples here. In your code
-// you can declare a vector either that way: Vec3<float> a, or that way: Vec3f a
-//[/comment]
+
 typedef Vec3<float> Vec3f;
 typedef Vec3<int> Vec3i;
 
-//[comment]
-// Implementation of a generic 4x4 Matrix class - Same thing here than with the Vec3 class. It uses
-// a template which is maybe less useful than with vectors but it can be used to
-// define the coefficients of the matrix to be either floats (the most case) or doubles depending
-// on our needs.
-//
-// To use you can either write: Matrix44<float> m; or: Matrix44f m;
-//[/comment]
+
 template<typename T>
 class Matrix44
 {
@@ -470,31 +417,49 @@ public:
     }
 };
 
+
 typedef Matrix44<float> Matrix44f;
 
-//[comment]
-// Testing our code. To test the matrix inversion code, we used Maya to output
-// the values of a matrix and its inverse (check the video at the top of this page). Of course this implies
-// that Maya actually does the right thing, but we can probably agree, that is actually does;).
-// These are the values for the input matrix:
-//
-// 0.707107 0 -0.707107 0 -0.331295 0.883452 -0.331295 0 0.624695 0.468521 0.624695 0 4.000574 3.00043 4.000574 1
-//
-// Given the input matrix, the inverse matrix computed by our code should match the following values:
-//
-// 0.707107 -0.331295 0.624695 0 0 0.883452 0.468521 0 -0.707107 -0.331295 0.624695 0 0 0 -6.404043 1
-//[/comment]
-//int main(int argc, char** argv)
-//{
-//    Vec3f v(0, 1, 2);
-//    std::cerr << v << std::endl;
-//    Matrix44f a, b, c;
-//    c = a * b;
-//
-//    Matrix44f d(0.707107, 0, -0.707107, 0, -0.331295, 0.883452, -0.331295, 0, 0.624695, 0.468521, 0.624695, 0, 4.000574, 3.00043, 4.000574, 1);
-//    std::cerr << d << std::endl;
-//    d.invert();
-//    std::cerr << d << std::endl;
-//
-//    return 0;
-//}
+/*
+template<typename T>
+class matrix3
+{
+public:
+    T x[3][3] = { {1,0,0}, {0,1,0}, {0,0,1} };
+
+    matrix3() {}
+
+    matrix3(T m00, T m01, T m02, T m10, T m11, T m12, T m20, T m21, T m22)
+    {
+        x[0][0] = m00;
+        x[0][1] = m01;
+        x[0][2] = m02;
+        x[1][0] = m10;
+        x[1][1] = m11;
+        x[1][2] = m12;
+        x[2][0] = m20;
+        x[2][1] = m21;
+        x[2][2] = m22;
+    }
+
+    const T* operator [] (uint8_t i) const { return x[i]; }
+    T* operator [] (uint8_t i) { return x[i]; }
+
+    matrix3 mult(matrix3& a, matrix3& b)
+    {
+        matrix3 result(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++) {
+                for (int u = 0; u < 3; u++)
+                    result[i][j] += matrix1[i][u] * matrix2[u][j];
+            }
+
+        return result;
+    }
+
+};
+
+
+typedef  matrix3<float> matrix3f;
+*/
