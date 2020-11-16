@@ -216,9 +216,8 @@ float IntegrateEdge(vec3 v1, vec3 v2)
     return res;
 }
 
-/*
-vec3 mul(matrix3f& m, vec3& v)
+float normalize2d(float x, float y)
 {
-    return vec3(m[0][0] * v.x + m[0][1] * v.x + m[0][2] * v.x, m[1][0] * v.y + m[1][1] * v.y + m[1][2] * v.y, m[2][0] * v.z + m[2][1] * v.z + m[2][2] * v.z);
+    float length = sqrt((x * x) + (y * y));
+    return (x / length + y / length) / 2;
 }
-*/

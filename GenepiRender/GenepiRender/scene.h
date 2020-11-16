@@ -71,8 +71,8 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             if (id == 0) mat_color = vec3(1.0f, 1.0f, 1.0f);
             //if (id == 0) refrac = 1.0f;
             //if (id == 0) roughness = 0.99;
-            //if (id == 2) rand_color = vec3(0.f, 1.f, 0.f);
-            //if (id == 4) rand_color = vec3(1.f, 0.f, 0.f);
+            //if (id == 2) rand_color = vec3(0.f, 1.0f, 0.f);
+            //if (id == 4) rand_color = vec3(1.0f, 0.f, 0.f);
 
             material new_material(id, rand_color, roughness, refrac);
 

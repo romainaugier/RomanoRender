@@ -22,11 +22,12 @@
 #include "utils.h"
 
 
-const int xres = 1920;
-const int yres = 1080;
+const int xres = 1000;
+const int yres = 1000;
 const int tile_number = 8;
-const int samples = 2048;
-int bounces[] = { 3, 3, 10 };
+const int samples = 32;
+const int nee_samples = 8;
+int bounces[] = { 4, 3, 10 };
 float variance_threshold = 0.001;
 
 
@@ -35,6 +36,10 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
     RTCIntersectContext context;
     rtcInitIntersectContext(&context);
 
+    float near_clipping = 0.0f;
+
+    if(depth[0] == 3) near_clipping = 0.0f;
+
     RTCRayHit rayhit;
     rayhit.ray.org_x = r.origin().x;
     rayhit.ray.org_y = r.origin().y;
@@ -42,14 +47,14 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
     rayhit.ray.dir_x = r.direction().x;
     rayhit.ray.dir_y = r.direction().y;
     rayhit.ray.dir_z = r.direction().z;
-    rayhit.ray.tnear = 0;
+    rayhit.ray.tnear = near_clipping;
     rayhit.ray.tfar = std::numeric_limits<float>::infinity();
     rayhit.ray.mask = -1;
     rayhit.ray.flags = 0;
     rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
     rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 
-    vec3 new_color;
+    vec3 new_color(0.0f);
 
     rtcIntersect1(g_scene, &context, &rayhit);
 
@@ -112,74 +117,66 @@ vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material
             color = cast_ray(new_ray, color, u, v, mats, g_scene, lights, new_depth) * refraction_color;
         }
         
-        //direct lighting
+        // direct lighting
         else
         {
             if (depth[0] == 0) return vec3(0.f);
 
             for (auto light : lights)
             {
-                vec3 ray_dir = return_raydir(light, hit_pos, hit_normal);
-                //vec3 dir = (ray_dir - hit_pos).normalize();
-
-                ray new_ray(hit_pos, ray_dir);
-
-                float distance = 10000.0f;
-                float area_shadow = 1.0f;
-
-                if (light.type == 0) distance = dist(hit_pos, light.position) - 0.001f;
-                
-                if (light.type == 2)
+                for (int i = 0; i < nee_samples; i++)
                 {
-                    if (dot(ray_dir, light.orientation) > 0) continue;
-                    vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
-                    distance = dist(hit_pos, pos) - 0.001f;
-                    float d = dot(light.orientation, ray_dir);
-                    area_shadow = -d;
+                    vec3 area_sample_position(0.0f);
+                    vec3 ray_dir = return_raydir(light, hit_pos, hit_normal, area_sample_position);
+
+                    ray new_ray(hit_pos, ray_dir);
+
+                    float distance = 10000.0f;
+                    float area_shadow = 1.0f;
+
+                    if (light.type == 0) distance = dist(hit_pos, light.position) - 0.001f;
+
+                    if (light.type == 2)
+                    {
+                        if (dot(ray_dir, light.orientation) > 0) continue;
+                        vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
+                        distance = dist(hit_pos, area_sample_position) - 0.001f;
+                        float d = dot(light.orientation, ray_dir);
+                        area_shadow = -d;
+                    }
+
+                    RTCRay shadow;
+                    shadow.org_x = new_ray.origin().x;
+                    shadow.org_y = new_ray.origin().y;
+                    shadow.org_z = new_ray.origin().z;
+                    shadow.dir_x = new_ray.direction().x;
+                    shadow.dir_y = new_ray.direction().y;
+                    shadow.dir_z = new_ray.direction().z;
+                    shadow.tnear = 0.001f;
+                    shadow.tfar = distance;
+                    shadow.mask = -1;
+                    shadow.flags = 0;
+
+                    rtcOccluded1(g_scene, &context, &shadow);
+
+                    if (shadow.tfar > 0.0f)
+                    {
+                        // lambert
+                        color += new_color * (1.0f / float(M_PI)) * return_light_int(light, distance) * std::max(0.f, dot(hit_normal, ray_dir)) / nee_samples;
+
+                        // oren-nayar
+                    }
                 }
                 
-                
-                
-
-                RTCRay shadow;
-                shadow.org_x = new_ray.origin().x;
-                shadow.org_y = new_ray.origin().y;
-                shadow.org_z = new_ray.origin().z;
-                shadow.dir_x = new_ray.direction().x;
-                shadow.dir_y = new_ray.direction().y;
-                shadow.dir_z = new_ray.direction().z;
-                shadow.tnear = 0.001f;
-                shadow.tfar = distance;
-                shadow.mask = -1;
-                shadow.flags = 0;
-
-                rtcOccluded1(g_scene, &context, &shadow);
-
-                if (shadow.tfar > 0.0f)
-                {
-                    //lambert
-                    color += new_color * return_light_int(light, distance) * std::max(0.f, dot(hit_normal, ray_dir)) * area_shadow;
-
-                    //oren-nayar
-                }
             }
             
-            //indirect lighting
-            double r1 = generate_random_float(0.0, 1.0);
-            double r2 = generate_random_float(0.0, 1.0);
-
-            vec3 rand_dir_local(cos(2 * M_PI * r1) * sqrt(1 - r2), sin(2 * M_PI * r1) * sqrt(1 - r2), sqrt(1 - r1));
-            vec3 rand(generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5);
-
-            vec3 tan1 = cross(hit_normal, rand);
-            vec3 tan2 = cross(tan1.normalize(), hit_normal);
-
-            vec3 rand_ray_dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
-            ray random_ray(hit_pos + hit_normal * 0.001, rand_ray_dir);
+            // indirect lighting
+            vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
+            ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
 
             int new_depth[] = { depth[0] - 1, depth[1], depth[2] };
 
-            color += cast_ray(random_ray, color, u, v, mats, g_scene, lights, new_depth) * new_color;
+            color += cast_ray(random_ray, color, u, v, mats, g_scene, lights, new_depth) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color;
         }
     }
 
@@ -193,14 +190,10 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, R
     float scale = tan(deg2rad(fov * 0.5));
     float imageAspectRatio = xres / (float)yres;
 
-    
-
-    vec3 campos(14.3f, 3.7f, 4.2f);
-    vec3 aim(-2.2, 4.0f, -2.5);  //pos pixar
-    //vec3 campos(0.f, 7.5f, 27.0f);
-    //vec3 aim(0.f, 7.5f, 0.f);
-    //vec3 campos(0.0, 0.0, 3.0);
-    //vec3 aim(0.0, 0.0, 0.0);
+    //vec3 campos(14.3f, 3.7f, 4.2f);
+    //vec3 aim(-2.2, 4.0f, -2.5);  //pos pixar
+    vec3 campos(0.f, 7.5f, 27.0f);
+    vec3 aim(0.f, 7.5f, 0.f);
     
     vec3 up(0, 1, 0);
     
@@ -268,8 +261,8 @@ static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, R
 
 int main()
 {
-    const char* filename = "C:/Users/augie/Desktop/test.png";
-    const char* path = "D:/GenepiRender/Models/kitchen_colors.obj";
+    const char* filename = "D:/GenepiRender/Renders/test.png";
+    const char* path = "D:/GenepiRender/Models/statue.obj";
     const int channels = 3; //rbg
 
     OIIO::ImageSpec spec(xres, yres, channels, OIIO::TypeDesc::FLOAT);
@@ -282,18 +275,21 @@ int main()
 
     std::vector<light> lights;
 
-    light dir_light(1, 0.48f, vec3(1.0f, 1.0f, 1.0f), vec3(1.0f, -0.5f, -1.0f), 0.015f);
-    light dir_light2(1, 0.38f, vec3(1.0f, 0.45f, 0.07f), vec3(1.0f, -0.5f, -1.0f), 0.06f);
+    light dir_light(1, 1.5f, vec3(1.0f, 1.0f, 1.0f), vec3(0.5f, -0.5f, -1.0f), 0.5f);
+    light dir_light2(1, 1.5f, vec3(1.0f, 0.45f, 0.07f), vec3(0.5f, -0.5f, -1.0f), 2.0f);
 
-    light square_light(2, false, 250.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, -3.5f), 10.0f, 5.0f, vec3(1, 0, 0));
-    light square_light2(2, false, 275.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, 3.0f), 10.0f, 5.0f, vec3(1, 0, 0));
-    light square_bounce(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(5.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0,0,1));
-    light square_bounce2(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(-2.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0, 0, 1));
+    //light square_light(2, false, 250.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, -3.5f), 10.0f, 5.0f, vec3(1, 0, 0));
+    //light square_light2(2, false, 275.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, 3.0f), 10.0f, 5.0f, vec3(1, 0, 0));
+    //light square_bounce(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(5.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0,0,1));
+    //light square_bounce2(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(-2.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0, 0, 1));
 
-    lights.push_back(square_light);
-    lights.push_back(square_light2);
-    lights.push_back(square_bounce);
-    lights.push_back(square_bounce2);
+    light square(2, false, 50.0f, vec3(0.65f, 0.85f, 0.96f), vec3(-7.5f, 0.0f, 10.0f), 15.0f, 15.0f, vec3(0, 0, -1));
+    lights.push_back(square);
+
+    //lights.push_back(square_light);
+    //lights.push_back(square_light2);
+    //lights.push_back(square_bounce);
+    //lights.push_back(square_bounce2);
 
     lights.push_back(dir_light);
     lights.push_back(dir_light2);

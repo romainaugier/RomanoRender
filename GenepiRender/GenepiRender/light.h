@@ -62,8 +62,8 @@ public:
 		v0 = position;
 
 		vec3 up(0, 1, 0);
-		float d = dot(o, vec3(0, 1, 0));
-		if (d > 0.9f | d < -0.1f) up = vec3(1, 0, 0);
+		float d = dot(o, up);
+		if (d > 0.9f | d < -0.9f) up = vec3(1, 0, 0);
 
 		v1 = v0 + cross(o, up).normalize() * sizex;
 		v2 = v0 - cross(o, cross(o, up)).normalize() * sizey;
@@ -72,12 +72,12 @@ public:
 	
 	vec3 point_light_intensity(float d)
 	{
-		return intensity * color / (4 * M_PI * (d * d));
+		return intensity * color / (d * d);
 	}
 };
 
 
-vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal)
+vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sample_position)
 {
 	vec3 dir(0.0f);
 
@@ -88,10 +88,23 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal)
 
 	if (light.type == 1)
 	{
-		vec3 rand = random_ray_in_hemisphere(hit_normal);
-		float angle = light.angle;
+		vec3 position = -light.direction * 100.0f;
+		vec3 up(0, 1, 0);
 
-		dir = lerp(-light.direction, rand, angle);
+		if (dot(up, light.direction) > 0.9f | dot(up, light.direction) < -0.9f) up = vec3(1, 0, 0);
+
+		float random_angle = generate_random_float(0, 2.0f * M_PI);
+		vec3 z = cross(-light.direction, up);
+		vec3 y = cross(-light.direction, z);
+		vec3 rand_pos = z * light.angle * cos(random_angle) +  y * light.angle * sin(random_angle) + position;
+
+		// deprecated
+		//vec3 rand = random_ray_in_hemisphere(hit_normal);
+		//float angle = light.angle;
+		//dir = lerp(-light.direction, rand, angle);
+
+		dir = rand_pos - hit_pos;
+		dir = dir.normalize();
 	}
 
 	if (light.type == 2)
@@ -105,8 +118,11 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal)
 		
 		vec3 position(0.0f);
 
-		dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4 - hit_pos;
+		dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4;
 
+		area_sample_position = dir;
+
+		dir = dir - hit_pos;
 		dir = dir.normalize();
 	}
 
@@ -137,7 +153,7 @@ vec3 return_light_int(light& light, float& d)
 	
 	if (light.type == 2)
 	{
-		return light.point_light_intensity(d);
+		return light.intensity * normalize2d(light.size_x, light.size_y) * light.color / (d * d);
 	}
 	
 	else
