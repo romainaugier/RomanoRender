@@ -3,22 +3,21 @@
 Monte Carlo pathtracer
 
 Features list :
-- scene import (obj format only for now)
-- multiple objects rendering
-- support triangles and quads (converted to triangles)
-- custom acceleration structure
-- multithreaded rendering (tile-based system)
-- multi format image export (png, exr, jpg...) using OpenImageIO library
+- Intel embree3 for fast path tracing
+- Square, directional, dome and point lights
+- Direct and indirect illumination
+- Lambert material
+- Dielectric material
+- Simple reflective material
+- OpenImageIO for output (jpg, exr, png, bmp)
+- Multithreaded tiled rendering
+- Obj format support
 
 
 Planned :
-- direct and global illumination
-- different light types (directionnal, point, area, image-based lighting)
-- simple materials (lambertian, dielectrics)
-- simple texture import (diffuse, roughness and normal maps)
-- simple procedural texturing
-- better acceleration structure
-
+- Image-based lighting
+- Uber-shader
+- Adaptive sampling
 
 
 Progress:
