@@ -65,7 +65,7 @@ int main(int, char**)
     float variance_threshold = 0.001;
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
-    const char* path = "D:/GenepiRender/Models/scene_drag.obj";
+    const char* path = "D:/GenepiRender/Models/dragon_2_scene.obj";
 
     Logger log(3);
 
