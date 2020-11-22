@@ -4,6 +4,9 @@
 #include <iomanip>
 #pragma once
 
+#ifndef MATRIX
+#define MATRIX
+
 template<typename T>
 class Vec3
 {
@@ -463,3 +466,5 @@ public:
 
 typedef  matrix3<float> matrix3f;
 */
+
+#endif

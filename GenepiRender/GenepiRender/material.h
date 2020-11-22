@@ -2,6 +2,9 @@
 #include "vec3.h"
 #include <OpenImageIO/imagebuf.h>
 
+#ifndef MATERIAL
+#define MATERIAL
+
 
 class material
 {
@@ -20,52 +23,23 @@ public:
     {        
     }
 
-    material(int& id, vec3 color_parm, float roughness_parm, float refraction_roughness_parm) :
+    material(int& id, vec3 color_parm, float _roughness, float _refrac) :
+        clr(color_parm),
+        roughness(_roughness),
+        refraction(_refrac)
+    {
+    }
+
+    material(int& id, vec3 color_parm, float roughness_parm, float reflectance_parm, float metallic_parm, float sheen_parm, float clearcoat_parm, float anisotropic_parm) :
         clr(color_parm),
         roughness(roughness_parm),
-        refraction_roughness(refraction_roughness_parm),
+        reflectance(reflectance_parm),
+        metallic(metallic_parm),
+        sheen(sheen_parm),
+        clearcoat(clearcoat_parm),
+        anisotropic(anisotropic_parm),
         mat_id(id)
     {
-        has_clr_map = false;
-        has_roughness_map = false;
-        has_normal_map = false;
-    }
-
-    material(int& id, const char *color_map_parm, float roughness_parm) :
-        clr_map(color_map_parm),
-        roughness(roughness_parm),
-        mat_id(id)
-    {
-        has_clr_map = true;
-        has_roughness_map = false;
-        has_normal_map = false;
-        //clr_buffer readimage()
-    }
-
-    material(int& id, const char *color_map_parm, const char *roughness_map_parm) :
-        clr_map(color_map_parm),
-        roughness_map(roughness_map_parm),
-        mat_id(id)
-    {
-        has_clr_map = true;
-        has_roughness_map = true;
-        has_normal_map = false;
-        //clr_buffer readimage()
-        //roughness_buffer readimage()
-    }
-
-    material(int& id, const char *color_map_parm, const char *roughness_map_parm, const char *normal_map_parm) :
-        clr_map(color_map_parm),
-        roughness_map(roughness_map_parm),
-        normal_map(normal_map_parm),
-        mat_id(id)
-    {
-        has_clr_map = true;
-        has_roughness_map = true;
-        has_normal_map = true;
-        //clr_buffer readimage();
-        //roughness_buffer readimage();
-        //normal_buffer readimage();
     }
 
 public:
@@ -74,28 +48,25 @@ public:
     vec3 normal;
 
     vec3 clr;
-    bool has_clr_map;
-    const char *clr_map;
-    OIIO::ImageBuf clr_buffer;
-    int clr_buf_w;
-    int clr_buf_h;
 
     float roughness;
-    bool has_roughness_map;
-    const char *roughness_map;
-    OIIO::ImageBuf roughness_buffer;
-    int rgh_buf_w;
-    int rgh_buf_h;
+    vec3 reflection_color;
 
+    float refraction;
     float refraction_roughness;
     vec3 refraction_color;
 
-    bool has_normal_map;
-    const char *normal_map;
-    OIIO::ImageBuf normal_buffer;
-    int nml_buf_w;
-    int nml_buf_h;
-
+    float metallic;
+    float reflectance;
+    float sheen;
+    float clearcoat;
+    float clearcoatGloss;
+    float anisotropic;
+    float specularTint;
+    float ior;
+    float relativeIOR;
+    float flatness;
+    float specTrans;
 };
 
 
@@ -111,3 +82,5 @@ vec3 get_tex_pixel(OIIO::ImageBuf& tex, int x, int y)
     tex.OIIO::ImageBuf::getpixel(x, y, 0, pixel);
     return vec3(pixel[0], pixel[1], pixel[2]);
 }
+
+#endif

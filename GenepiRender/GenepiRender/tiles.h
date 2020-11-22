@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
 
+#ifndef TILE
+#define TILe
+
 
 class tile
 {
@@ -70,3 +73,5 @@ std::vector<tile> generate_tiles(const int& number, const int& xres, const int& 
 	return tiles;
 }
 
+
+#endif
