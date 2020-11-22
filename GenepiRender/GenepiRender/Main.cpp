@@ -1,302 +1,104 @@
-#include <OpenImageIO/imagebuf.h>
-#include <OpenImageIO/imagebufalgo.h>
+// dear imgui: standalone example application for GLFW + OpenGL 3, using programmable pipeline
+// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
+// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
-#include <iostream>
-#include <vector>
-#include <random>
-#include <limits>
-#include <chrono>
-#include <future>
-#include <algorithm>
-#include <math.h>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <stdio.h>
 
-#include "objloader.h"
-#include "ray.h"
-#include "triangle.h"
-#include "camera.h"
-#include "matrix.h"
-#include "tiles.h"
-#include "scene.h"
-#include "material.h"
-#include "light.h"
-#include "utils.h"
+#define IMGUI_IMPL_OPENGL_LOADER_GLEW
 
+// About Desktop OpenGL function loaders:
+//  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
+//  Helper libraries are often used for this purpose! Here we are supporting a few common ones (gl3w, glew, glad).
+//  You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+#include <GL/gl3w.h>            // Initialize with gl3wInit()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+#include <GL/glew.h>            // Initialize with glewInit()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+#include <glad/glad.h>          // Initialize with gladLoadGL()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+#include <glad/gl.h>            // Initialize with gladLoadGL(...) or gladLoaderLoadGL()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+#define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
+#include <glbinding/Binding.h>  // Initialize with glbinding::Binding::initialize()
+#include <glbinding/gl/gl.h>
+using namespace gl;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
+#define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
+#include <glbinding/glbinding.h>// Initialize with glbinding::initialize()
+#include <glbinding/gl/gl.h>
+using namespace gl;
+#else
+#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#endif
 
-const int xres = 1920;
-const int yres = 1080;
-const int tile_number = 8;
-const int samples = 2048;
-int bounces[] = { 3, 3, 10 };
-float variance_threshold = 0.001;
+// Include glfw3.h after our OpenGL definitions
+#include <GLFW/glfw3.h>
+#include "render.h"
 
+// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
+// To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
+// Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
+#if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
+#pragma comment(lib, "legacy_stdio_definitions")
+#endif
 
-vec3 cast_ray(const ray& r, vec3 color, float& u, float& v, std::vector<material>& mats, RTCScene& g_scene, std::vector<light>& lights, int depth[])
-{   
-    RTCIntersectContext context;
-    rtcInitIntersectContext(&context);
-
-    RTCRayHit rayhit;
-    rayhit.ray.org_x = r.origin().x;
-    rayhit.ray.org_y = r.origin().y;
-    rayhit.ray.org_z = r.origin().z;
-    rayhit.ray.dir_x = r.direction().x;
-    rayhit.ray.dir_y = r.direction().y;
-    rayhit.ray.dir_z = r.direction().z;
-    rayhit.ray.tnear = 0;
-    rayhit.ray.tfar = std::numeric_limits<float>::infinity();
-    rayhit.ray.mask = -1;
-    rayhit.ray.flags = 0;
-    rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
-    rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-
-    vec3 new_color;
-
-    rtcIntersect1(g_scene, &context, &rayhit);
-
-    if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
-    {
-        int hit_mat_id = rayhit.hit.geomID;
-
-        float hit_albedo = 1.0f;
-
-        new_color = mats[hit_mat_id].clr;
-        float hit_roughness = mats[hit_mat_id].roughness;
-        float hit_refraction = mats[hit_mat_id].refraction_roughness;
-
-        vec3 hit_normal = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z).normalize();
-
-        
-        if (mats[hit_mat_id].islight)
-        {
-            float d = dot(r.direction(), mats[hit_mat_id].normal);
-            if (d < 0 && depth[0] == 3) return mats[hit_mat_id].clr;
-        }
-        
-        vec3 hit_pos = vec3(rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z) + rayhit.ray.tfar * vec3(rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z);
-        
-        // reflection
-        if (hit_roughness < 1.0)
-        {
-            if (depth[1] == 0) return vec3(0.f);
-         
-            vec3 new_ray_dir;
-            new_ray_dir = reflect(r.direction(), hit_normal, hit_roughness);
-            ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
-
-            vec3 reflection_color(1.0f, 0.874f, 0.0f);
-
-            int new_depth[] = { depth[0], depth[1] - 1, depth[2] };
-
-            color = cast_ray(new_ray, color, u, v, mats, g_scene, lights, new_depth) * reflection_color;
-        }
-
-        // refraction
-        else if (hit_refraction > 0.0)
-        {
-            if (depth[2] == 0) return vec3(0.f);
-
-            vec3 new_ray_dir;
-            float offset;
-            if (dot(r.direction(), hit_normal) > 0) offset = 0.001f;
-            if (dot(r.direction(), hit_normal) < 0) offset = -0.001f;
-
-            vec3 random_refrac = generate_random_vector(-0.025f, 0.025f);
-
-            new_ray_dir = refract(r.direction(), hit_normal, 1.7f) + (random_refrac * 1);
-            ray new_ray(hit_pos + hit_normal * offset, new_ray_dir);
-
-            vec3 refraction_color(1.0f, 1.0f, 1.0f);
-
-            int new_depth[] = { depth[0], depth[1], depth[2] - 1 };
-
-            color = cast_ray(new_ray, color, u, v, mats, g_scene, lights, new_depth) * refraction_color;
-        }
-        
-        //direct lighting
-        else
-        {
-            if (depth[0] == 0) return vec3(0.f);
-
-            for (auto light : lights)
-            {
-                vec3 ray_dir = return_raydir(light, hit_pos, hit_normal);
-                //vec3 dir = (ray_dir - hit_pos).normalize();
-
-                ray new_ray(hit_pos, ray_dir);
-
-                float distance = 10000.0f;
-                float area_shadow = 1.0f;
-
-                if (light.type == 0) distance = dist(hit_pos, light.position) - 0.001f;
-                
-                if (light.type == 2)
-                {
-                    if (dot(ray_dir, light.orientation) > 0) continue;
-                    vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
-                    distance = dist(hit_pos, pos) - 0.001f;
-                    float d = dot(light.orientation, ray_dir);
-                    area_shadow = -d;
-                }
-                
-                
-                
-
-                RTCRay shadow;
-                shadow.org_x = new_ray.origin().x;
-                shadow.org_y = new_ray.origin().y;
-                shadow.org_z = new_ray.origin().z;
-                shadow.dir_x = new_ray.direction().x;
-                shadow.dir_y = new_ray.direction().y;
-                shadow.dir_z = new_ray.direction().z;
-                shadow.tnear = 0.001f;
-                shadow.tfar = distance;
-                shadow.mask = -1;
-                shadow.flags = 0;
-
-                rtcOccluded1(g_scene, &context, &shadow);
-
-                if (shadow.tfar > 0.0f)
-                {
-                    //lambert
-                    color += new_color * return_light_int(light, distance) * std::max(0.f, dot(hit_normal, ray_dir)) * area_shadow;
-
-                    //oren-nayar
-                }
-            }
-            
-            //indirect lighting
-            double r1 = generate_random_float(0.0, 1.0);
-            double r2 = generate_random_float(0.0, 1.0);
-
-            vec3 rand_dir_local(cos(2 * M_PI * r1) * sqrt(1 - r2), sin(2 * M_PI * r1) * sqrt(1 - r2), sqrt(1 - r1));
-            vec3 rand(generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5, generate_random_float(0.0, 1.0) - 0.5);
-
-            vec3 tan1 = cross(hit_normal, rand);
-            vec3 tan2 = cross(tan1.normalize(), hit_normal);
-
-            vec3 rand_ray_dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
-            ray random_ray(hit_pos + hit_normal * 0.001, rand_ray_dir);
-
-            int new_depth[] = { depth[0] - 1, depth[1], depth[2] };
-
-            color += cast_ray(random_ray, color, u, v, mats, g_scene, lights, new_depth) * new_color;
-        }
-    }
-
-    return color;
+static void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-
-static void render(tile* cur_tile, int xstart, int xend, int ystart, int yend, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights)
+int main(int, char**)
 {
-    float fov = 43;
-    float scale = tan(deg2rad(fov * 0.5));
-    float imageAspectRatio = xres / (float)yres;
+    // setups parameters
+    int xres = 1000;
+    int yres = 1000;
+    int tile_number = 8;
+    int unified_samples = 8192;
+    int nee_samples = 1;
+    int gi_samples = 1;
+    int samples[] = { unified_samples, nee_samples, gi_samples };
+    int bounces[] = { 3, 3, 10 };
+    float variance_threshold = 0.001;
 
-    
+    const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
+    const char* path = "D:/GenepiRender/Models/scene_drag.obj";
 
-    vec3 campos(14.3f, 3.7f, 4.2f);
-    vec3 aim(-2.2, 4.0f, -2.5);  //pos pixar
-    //vec3 campos(0.f, 7.5f, 27.0f);
-    //vec3 aim(0.f, 7.5f, 0.f);
-    //vec3 campos(0.0, 0.0, 3.0);
-    //vec3 aim(0.0, 0.0, 0.0);
-    
-    vec3 up(0, 1, 0);
-    
-    vec3 zAxis = ((campos - aim).normalize());
-    vec3 xAxis = (cross(up, zAxis).normalize());
-    vec3 yAxis = cross(zAxis, xAxis);
-    
-    Matrix44<float> cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, campos.x, campos.y, campos.z, 1.0f);
-    
-    Vec3f rayOriginWorld, rayPWorld;
-    Vec3f campos2(0.0, 0.0, 0.0);
+    Logger log(3);
 
-    float pixel[3];
+    render_settings settings(xres, yres, samples, bounces, filename, log, tile_number);
+    //camera cam(vec3(14.0f, 3.0f, 1.0f), vec3(-2.2f, 3.0f, -2.5f), 35, settings.xres, settings.yres, 0.075f, 14.0f); // pixar kitchen
+    camera cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
 
-    auto start_tile = std::chrono::system_clock::now();
-
-    for (int y = ystart; y < yend; y++)
-        {
-        for (int x = xstart; x < xend; x++)
-        {
-            vec3 col(0.f);
-            float t;
-            float u, v;
-
-            for (int s = 0; s < samples; s++)
-            {
-                //adaptive sampling
-                //if (variance < variance_threshold) continue;
-
-                //AA Box-Muller
-                int aa_samples = 1;
-                float r1 = generate_random_float(0.0, 1.0);
-                float r2 = generate_random_float(0.0, 1.0);
-                float dx = sqrt(-0.5 * log(r1)) * cos(2 * M_PI * r2);
-                float dy = sqrt(-0.5 * log(r1)) * sin(2 * M_PI * r2);
-
-                float x_ = (2 * (x + 0.5 + dx) / (float)xres - 1) * imageAspectRatio * scale;
-                float y_ = (1 - 2 * (y + 0.5 + dy) / (float)yres) * scale;
-
-                cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
-                cameraToWorld.multVecMatrix(Vec3f(x_, y_, -1), rayPWorld);
-                Vec3f rayDir = rayPWorld - rayOriginWorld;
-                rayDir.normalize();
-
-                vec3 dir(rayDir.x, rayDir.y, rayDir.z);
-                ray ray(campos, dir);
-
-                col += (cast_ray(ray, col, u, v, mats, g_scene, lights, bounces)) / samples;
-            }
-
-            pixel[0] = pow(col.x, 1.0 / 2.2);
-            pixel[1] = pow(col.y, 1.0 / 2.2);
-            pixel[2] = pow(col.z, 1.0 / 2.2);
-        
-            set_tile_pixel(*cur_tile, col.x, col.y, col.z);
-            }
-        }
-
-    auto end_tile = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_tile = end_tile - start_tile;
-    //std::cout << "Tile " << cur_tile->id << " rendered in " << elapsed_tile.count() << " seconds" << "\n";
-
-}
-
-
-int main()
-{
-    const char* filename = "C:/Users/augie/Desktop/test.png";
-    const char* path = "D:/GenepiRender/Models/kitchen_colors.obj";
-    const int channels = 3; //rbg
-
-    OIIO::ImageSpec spec(xres, yres, channels, OIIO::TypeDesc::FLOAT);
-
-    OIIO::ImageBuf buffer(spec);
-
-    OIIO::ROI roi(0, xres, 0, yres, 0, 3);
-
-    std::vector<tile> tiles = generate_tiles(tile_number, xres, yres, 3);
 
     std::vector<light> lights;
 
-    light dir_light(1, 0.48f, vec3(1.0f, 1.0f, 1.0f), vec3(1.0f, -0.5f, -1.0f), 0.015f);
-    light dir_light2(1, 0.38f, vec3(1.0f, 0.45f, 0.07f), vec3(1.0f, -0.5f, -1.0f), 0.06f);
+    light square(2, true, 150.0f, vec3(1.0f), vec3(-5.0f, 15.0f, -5.0f), 10.0f, 10.0f, vec3(0, -1, 0));
+    lights.push_back(square);
 
-    light square_light(2, false, 250.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, -3.5f), 10.0f, 5.0f, vec3(1, 0, 0));
-    light square_light2(2, false, 275.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, 3.0f), 10.0f, 5.0f, vec3(1, 0, 0));
+    //light square2(2, true, 300.0f, vec3(1.0f), vec3(-1.0f, 7.0f, -1.0f), 2.0f, 2.0f, vec3(0, 0, -1));
+    //lights.push_back(square2);
+
+    /*
+    light dir_light(1, 15.0f, vec3(1.0f, 1.0f, 1.0f), vec3(0.6f, -0.5f, -0.6f), 10.0f);
+    light dir_light2(1, 10.5f, vec3(1.0f, 0.45f, 0.07f), vec3(0.6f, -0.5f, -0.6f), 12.5f);
+
+    light square_light(2, false, 150.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, -3.5f), 10.0f, 5.0f, vec3(1, 0, 0));
+    light square_light2(2, false, 150.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, 3.0f), 10.0f, 5.0f, vec3(1, 0, 0));
     light square_bounce(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(5.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0,0,1));
     light square_bounce2(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(-2.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0, 0, 1));
 
     lights.push_back(square_light);
     lights.push_back(square_light2);
-    lights.push_back(square_bounce);
-    lights.push_back(square_bounce2);
+    //lights.push_back(square_bounce);
+    //lights.push_back(square_bounce2);
 
     lights.push_back(dir_light);
     lights.push_back(dir_light2);
+    */
 
     RTCDevice g_device = initializeDevice();
     RTCScene g_scene = rtcNewScene(g_device);
@@ -310,58 +112,350 @@ int main()
     load_scene(materials, lights, g_scene, g_device, path);
     rtcCommitScene(g_scene);
 
-    
+    //batch_render_omp(settings, cam, g_scene, materials, lights);
 
-    int size = 0;
+    color_t* pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
+    color_t* new_pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
 
-    std::vector<std::future<void>> futures;
+    // Setup window
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit())
+        return 1;
 
-    std::cout << "Starting render..." << std::endl;
-    std::cout << "=================================" << std::endl;
-    auto start = std::chrono::system_clock::now();
+    // Decide GL+GLSL versions
+#ifdef __APPLE__
+    // GL 3.2 + GLSL 150
+    const char* glsl_version = "#version 150";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+#else
+    // GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
 
-    float progress = 100.0 / (tile_number * tile_number);
+    // Create window with graphics context
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Romano Render", NULL, NULL);
+    if (window == NULL)
+        return 1;
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
 
-    for (auto& tile : tiles)
+    // Initialize OpenGL loader
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+    bool err = gl3wInit() != 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+    bool err = glewInit() != GLEW_OK;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+    bool err = gladLoadGL() == 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+    bool err = gladLoadGL(glfwGetProcAddress) == 0; // glad2 recommend using the windowing library loader instead of the (optionally) bundled one.
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+    bool err = false;
+    glbinding::Binding::initialize();
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
+    bool err = false;
+    glbinding::initialize([](const char* name) { return (glbinding::ProcAddress)glfwGetProcAddress(name); });
+#else
+    bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader is likely to requires some form of initialization.
+#endif
+    if (err)
     {
-        futures.push_back(std::async(std::launch::async, render, &tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights));
-        //render(&tile, tile.xstart, tile.xend, tile.ystart, tile.yend, g_scene, materials, lights);
+        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+        return 1;
     }
 
 
-    for(int i = 0; i < futures.size(); i++)
-    {
-        futures[i].wait();
-        float p = progress* (i + 1);
-        std::cout << "progress : " << std::floor(p) << "%                        " << "\r";
-    }
 
-    std::cout << "\n";
 
-    for (auto& tile : tiles)
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Our state
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
+
+    int s = 1;
+    bool render = false;
+    bool save_window = false;
+
+    GLuint image_texture = 0;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // Main loop
+    while (!glfwWindowShouldClose(window))
     {
-        float pixels[3];
-        int index = 0;
-        for (int j = tile.ystart; j < tile.yend; j++)
+        glfwPollEvents();
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+
+        if (render)
         {
-            for (int i = tile.xstart; i < tile.xend; i++)
+            progressive_render(s, pixels, settings, cam, g_scene, materials, lights, samples, bounces);
+
+            for (int y = 0; y < yres; y++)
             {
-                pixels[0] = tile.data[index];
-                pixels[1] = tile.data[index + 1];
-                pixels[2] = tile.data[index + 2];
+                for (int x = 0; x < xres; x++)
+                {
+                    new_pixels[x + y * xres].R = pixels[x + y * xres].R / s;
+                    new_pixels[x + y * xres].G = pixels[x + y * xres].G / s;
+                    new_pixels[x + y * xres].B = pixels[x + y * xres].B / s;
+                }
+            }
 
-                buffer.setpixel(i, j, 0, pixels);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
+            s++;
+        }
+        
+        
+        {
+            ImGui::Begin("RenderView");
 
-                index += 3;
+            if (ImGui::Button("Start"))
+            {
+                render = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Stop"))
+            {
+                render = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Reset"))
+            {
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Save Image"))
+            {
+                save_window = true;
+            }
+
+            ImGui::Image((void*)image_texture, ImVec2(settings.xres, settings.yres));
+            ImGui::End();
+        }
+
+        if (save_window)
+        {
+            ImGui::Begin("Save Image", &save_window);
+            
+            static char path[128] = "D:/image.png";
+
+            ImGui::InputText("File Path", path, IM_ARRAYSIZE(path));
+
+            if (ImGui::Button("Save"))
+            {
+                OIIO::ImageSpec spec(settings.xres, settings.yres, 3, OIIO::TypeDesc::FLOAT);
+                OIIO::ImageBuf buffer(spec, new_pixels);
+
+                //buffer = OIIO::ImageBufAlgo::flip(buffer);
+                
+                buffer.write(path);
+
+                save_window = false;
+            }
+
+
+
+            ImGui::End();
+
+        }
+
+        
+        {
+            ImGui::Begin("Infos");                          
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
+        // Camera
+        {
+            ImGui::Begin("Camera");
+            
+            static float campos[3];
+            static float camaim[3];
+
+            static int focal_length = cam.focal_length;
+            static float bokeh_power = cam.aperture;
+            static float focus_distance = cam.focus_dist;
+            static float anamorphic[2];
+            static bool change = false;
+
+            ImGui::InputFloat3("Camera Position", campos);
+            ImGui::InputFloat3("Camera Aim", camaim);
+            ImGui::InputInt("Focal Length", &focal_length, 0, 1000);
+            ImGui::SliderFloat("Bokeh Power", &bokeh_power, 0, 10);
+            ImGui::InputFloat("Focus Distance", &focus_distance, 0, 10000);
+            ImGui::InputFloat2("Anamoprhic", anamorphic, 0.0f, 2.0f);
+            if(ImGui::Button("Submit Changes")) change = true;
+
+            if (change)
+            {
+                cam.pos.x = campos[0];
+                cam.pos.y = campos[1];
+                cam.pos.z = campos[2];
+
+                cam.lookat.x = camaim[0];
+                cam.lookat.y = camaim[1];
+                cam.lookat.z = camaim[2];
+
+                cam.focal_length = focal_length;
+                cam.aperture = bokeh_power;
+                cam.focus_dist = focus_distance;
+
+                cam.anamorphic_x = anamorphic[0];
+                cam.anamorphic_y = anamorphic[1];
+
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+
+                change = false;
+            }
+
+            ImGui::End();
+        }
+
+        // Light
+        {
+            ImGui::Begin("Light Editor");
+
+            static int light_id;
+            static float light_int;
+            static float light_color[3];
+            static float light_position[3];
+            static float light_orientation[3];
+            static float light_size[2];
+            static bool change = false;
+
+            ImGui::InputInt("Light ID", &light_id);
+            ImGui::InputFloat("Light Intensity", &light_int, 0, 1500);
+            ImGui::InputFloat3("Light Color", light_color);
+            ImGui::InputFloat3("Light Position", light_position);
+            ImGui::InputFloat3("Light Orientation", light_orientation);
+            ImGui::InputFloat2("Light Size", light_size);
+            if (ImGui::Button("Submit Changes")) change = true;
+
+            if (change)
+            {
+                lights[light_id].intensity = light_int;
+                lights[light_id].color.x = light_color[0];
+                lights[light_id].color.y = light_color[1];
+                lights[light_id].color.z = light_color[2];
+                lights[light_id].position.x = light_position[0];
+                lights[light_id].position.y = light_position[1];
+                lights[light_id].position.z = light_position[2];
+                lights[light_id].orientation.x = light_orientation[0];
+                lights[light_id].orientation.y = light_orientation[1];
+                lights[light_id].orientation.z = light_orientation[2];
+                lights[light_id].size_x = light_size[0];
+                lights[light_id].size_y = light_size[2];
+
+                rtcCommitScene(g_scene);
+
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+
+                change = false;
             }
         }
+
+        // Materials
+        {
+            ImGui::Begin("Material Editor");
+
+            static int mat_id;
+            static float material_color[3];
+            static float reflection_color[3];
+            static float refraction_color[3];
+            static float refrac;
+            static float random_refrac;
+            static float roughness;
+            static float metallic;
+            static float reflectance;
+            static bool change = false;
+
+            ImGui::InputInt("Material ID", &mat_id);
+            ImGui::InputFloat3("Material Color", material_color);
+            ImGui::InputFloat("Roughness", &roughness);
+            ImGui::InputFloat("Reflectance", &reflectance);
+            ImGui::InputFloat("Metallic", &metallic);
+            ImGui::InputFloat3("Reflection Color", reflection_color);
+            ImGui::InputFloat("Refraction", &refrac);
+            ImGui::InputFloat("Refraction Fuzziness", &random_refrac);
+            ImGui::InputFloat3("Refraction Color", refraction_color);
+            if (ImGui::Button("Submit Changes")) change = true;
+
+            if (change)
+            {
+                materials[mat_id].clr.x = material_color[0];
+                materials[mat_id].clr.y = material_color[1];
+                materials[mat_id].clr.z = material_color[2];
+
+                materials[mat_id].roughness = roughness;
+                materials[mat_id].reflectance = reflectance;
+                materials[mat_id].metallic = metallic;
+
+                materials[mat_id].reflection_color.x = reflection_color[0];
+                materials[mat_id].reflection_color.y = reflection_color[1];
+                materials[mat_id].reflection_color.z = reflection_color[2];
+
+                materials[mat_id].refraction_color.x = refraction_color[0];
+                materials[mat_id].refraction_color.y = refraction_color[1];
+                materials[mat_id].refraction_color.z = refraction_color[2];
+
+                materials[mat_id].refraction = refrac;
+                materials[mat_id].refraction_roughness = random_refrac;
+
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+
+                change = false;
+            }
+        }
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
     }
 
-    auto end = std::chrono::system_clock::now();
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "=================================" << std::endl;
-    std::cout << "Render time : " << elapsed.count() << " seconds" << std::endl;
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
-    buffer.write(filename);
+    return 0;
 }

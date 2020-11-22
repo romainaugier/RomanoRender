@@ -15,6 +15,10 @@
 #include "light.h"
 
 
+#ifndef SCENE
+#define SCENE
+
+
 float infinity = std::numeric_limits<float>::infinity();
 
 
@@ -62,19 +66,21 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             std::mt19937 mt(rd());
             std::uniform_real_distribution<float> dist(0.25f, 0.75f);
             //vec3 rand_color(dist(mt));
-            vec3 rand_color(0.5f);
+            vec3 rand_color(1.0f);
 
             vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
 
             float roughness = 1.0;
             float refrac = 0.0;
-            if (id == 0) mat_color = vec3(1.0f, 1.0f, 1.0f);
-            //if (id == 0) refrac = 1.0f;
-            //if (id == 0) roughness = 0.99;
+            //if (id == 1) rand_color = vec3(0.25f);
+            //if (id == 2) refrac = 1.0f;
+            //if (id == 2) roughness = 0.05;
             //if (id == 2) rand_color = vec3(0.f, 1.f, 0.f);
             //if (id == 4) rand_color = vec3(1.f, 0.f, 0.f);
 
-            material new_material(id, rand_color, roughness, refrac);
+            material new_material(id, mat_color, roughness, refrac);
+
+            new_material.islight = false;
 
             materials.push_back(new_material);
 
@@ -136,3 +142,4 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
 }
 
 
+#endif

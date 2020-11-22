@@ -1,6 +1,9 @@
 #pragma once
 #include <iostream>
 
+#ifndef VEC3
+#define VEC3
+
 struct alignas(16) vec3
 {
 	//3 dimensions
@@ -165,3 +168,6 @@ vec3 rotation_yz(vec3 v, float ay, float az)
 {
 	return rotation_z(rotation_y(v, ay), az);
 }
+
+
+#endif

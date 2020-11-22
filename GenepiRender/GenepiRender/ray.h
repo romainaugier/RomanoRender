@@ -1,6 +1,9 @@
 #pragma once
 #include "vec3.h"
 
+#ifndef RAY
+#define RAY
+
 class ray
 {
 public:
@@ -22,3 +25,5 @@ public:
 	vec3 invdir;
 	int sign[3];
 };
+
+#endif
