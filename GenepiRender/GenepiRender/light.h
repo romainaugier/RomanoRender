@@ -95,11 +95,12 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 		vec3 up(0, 1, 0);
 
 		if (dot(up, light.direction) > 0.9f | dot(up, light.direction) < -0.9f) up = vec3(1, 0, 0);
-
+    
 		float random_angle = generate_random_float() * 2.0f * M_PI;
 		vec3 z = cross(-light.direction, up);
 		vec3 y = cross(-light.direction, z);
 		vec3 rand_pos = z * light.angle * cos(random_angle) + y * light.angle * sin(random_angle) + position;
+
 
 		// deprecated
 		//vec3 rand = random_ray_in_hemisphere(hit_normal);
@@ -123,7 +124,9 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 
 		dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4;
 
+
 		area_sample_position = dir;
+
 
 		dir = dir - hit_pos;
 		dir = dir.normalize();
@@ -156,7 +159,9 @@ vec3 return_light_int(light& light, float& d)
 
 	if (light.type == 2)
 	{
+
 		return light.intensity * light.color / (d * d);
+
 	}
 
 	else

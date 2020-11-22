@@ -357,3 +357,4 @@ void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int&
 
 
 #endif
+
