@@ -159,8 +159,8 @@ vec3 random_in_unit_disk()
 
 vec3 reflect(vec3& i, vec3& n, float R)
 {
-    //vec3 random = random_ray_in_hemisphere(n);
-    vec3 r = i - 2 * dot(i, n) * n;// +lerp(vec3(0), random, R);
+    vec3 random = random_ray_in_hemisphere(n);
+    vec3 r = i - 2 * dot(i, n) * n + lerp(vec3(1.0f), random, R);
     return r.normalize();
 }
 
