@@ -74,7 +74,7 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         
 
         // refraction
-        if (hit_refraction > 0.0)
+        else if (hit_refraction > 0.0)
         {
             if (depth[2] == 0) return vec3(0.f);
 
@@ -367,7 +367,7 @@ void batch_render_omp(render_settings& settings, camera& cam, RTCScene g_scene, 
                 
                 // depth of field
                 vec3 dir = cam.pos + cam.focus_dist * rayDir.normalize();
-                vec3 new_pos = cam.pos + vec3(randTransformed.x, randTransformed.y, randTransformed.z);
+                vec3 new_pos = cam.pos + vec3(randTransformed.x, randTransformed.y, 0.0f);
 
                 ray ray(new_pos, (dir - new_pos).normalize());
 
@@ -468,7 +468,7 @@ void progressive_render(int s, color_t* pixels, render_settings& settings, camer
 
     cam.fov = 2 * rad2deg(std::atan(36.0f / (2 * cam.focal_length)));
 
-#pragma omp parallel for 
+#pragma omp parallel for schedule(dynamic, 2)
     for (int y = 0; y < settings.yres; y++)
     {
         for (int x = 0; x < settings.xres; x++)

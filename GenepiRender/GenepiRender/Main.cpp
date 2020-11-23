@@ -7,7 +7,7 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 
-#define IMGUI_IMPL_OPENGL_LOADER_GLEW
+#define IMGUI_IMPL_OPENGL_LOADER_GL3W
 
 // About Desktop OpenGL function loaders:
 //  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
@@ -37,7 +37,6 @@ using namespace gl;
 
 // Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
-#include "render.h"
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -50,6 +49,7 @@ static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
+
 
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
@@ -73,15 +73,8 @@ static void glfw_error_callback(int error, const char* description)
 #include "material.h"
 #include "light.h"
 #include "utils.h"
+#include "render.h"
 
-
-const int xres = 1000;
-const int yres = 1000;
-const int tile_number = 8;
-const int samples = 32;
-const int nee_samples = 8;
-int bounces[] = { 4, 3, 10 };
-float variance_threshold = 0.001;
 
 
 int main(int, char**)
@@ -90,7 +83,7 @@ int main(int, char**)
     int xres = 1000;
     int yres = 1000;
     int tile_number = 8;
-    int unified_samples = 8192;
+    int unified_samples = 32;
     int nee_samples = 1;
     int gi_samples = 1;
     int samples[] = { unified_samples, nee_samples, gi_samples };
@@ -112,28 +105,6 @@ int main(int, char**)
     light square(2, true, 150.0f, vec3(1.0f), vec3(-5.0f, 15.0f, -5.0f), 10.0f, 10.0f, vec3(0, -1, 0));
     lights.push_back(square);
 
-    //light square2(2, true, 300.0f, vec3(1.0f), vec3(-1.0f, 7.0f, -1.0f), 2.0f, 2.0f, vec3(0, 0, -1));
-    //lights.push_back(square2);
-
-    /*
-    light dir_light(1, 15.0f, vec3(1.0f, 1.0f, 1.0f), vec3(0.6f, -0.5f, -0.6f), 10.0f);
-    light dir_light2(1, 10.5f, vec3(1.0f, 0.45f, 0.07f), vec3(0.6f, -0.5f, -0.6f), 12.5f);
-
-    light square_light(2, false, 150.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, -3.5f), 10.0f, 5.0f, vec3(1, 0, 0));
-    light square_light2(2, false, 150.0f, vec3(0.6f, 0.8f, 0.9f), vec3(-9.1f, 3.25f, 3.0f), 10.0f, 5.0f, vec3(1, 0, 0));
-    light square_bounce(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(5.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0,0,1));
-    light square_bounce2(2, false, 5.0f, vec3(1.0f, 0.45f, 0.07f), vec3(-2.0f, 0.0f, -2.8f), 4.0f, 3.0f, vec3(0, 0, 1));
-
-    lights.push_back(square_light);
-    lights.push_back(square_light2);
-    //lights.push_back(square_bounce);
-    //lights.push_back(square_bounce2);
-
-
-    lights.push_back(dir_light);
-    lights.push_back(dir_light2);
-    */
-
     RTCDevice g_device = initializeDevice();
     RTCScene g_scene = rtcNewScene(g_device);
 
@@ -141,7 +112,6 @@ int main(int, char**)
     rtcSetSceneFlags(g_scene, RTC_SCENE_FLAG_DYNAMIC | RTC_SCENE_FLAG_ROBUST);
 
     std::vector<material> materials;
-    std::vector<light> lights2;
 
     load_scene(materials, lights, g_scene, g_device, path);
     rtcCommitScene(g_scene);
@@ -151,10 +121,29 @@ int main(int, char**)
     color_t* pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
     color_t* new_pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
 
+
+
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
+
+    // Decide GL+GLSL versions
+#ifdef __APPLE__
+    // GL 3.2 + GLSL 150
+    const char* glsl_version = "#version 150";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+#else
+    // GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
 
     // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(1920, 1080, "Romano Render", NULL, NULL);
@@ -163,23 +152,59 @@ int main(int, char**)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
+    // Initialize OpenGL loader
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+    bool err = gl3wInit() != 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+    bool err = glewInit() != GLEW_OK;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+    bool err = gladLoadGL() == 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+    bool err = gladLoadGL(glfwGetProcAddress) == 0; // glad2 recommend using the windowing library loader instead of the (optionally) bundled one.
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+    bool err = false;
+    glbinding::Binding::initialize();
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
+    bool err = false;
+    glbinding::initialize([](const char* name) { return (glbinding::ProcAddress)glfwGetProcAddress(name); });
+#else
+    bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader is likely to requires some form of initialization.
+#endif
+    if (err)
+    {
+        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+        return 1;
+    }
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
+
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
 
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     int s = 1;
     bool render = false;
     bool save_window = false;
+
+    
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -196,6 +221,7 @@ int main(int, char**)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
@@ -216,8 +242,8 @@ int main(int, char**)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
             s++;
         }
-        
-        
+
+
         {
             ImGui::Begin("RenderView");
 
@@ -242,13 +268,15 @@ int main(int, char**)
             }
 
             ImGui::Image((void*)image_texture, ImVec2(settings.xres, settings.yres));
+            
             ImGui::End();
         }
+
 
         if (save_window)
         {
             ImGui::Begin("Save Image", &save_window);
-            
+
             static char path[128] = "D:/image.png";
 
             ImGui::InputText("File Path", path, IM_ARRAYSIZE(path));
@@ -259,7 +287,7 @@ int main(int, char**)
                 OIIO::ImageBuf buffer(spec, new_pixels);
 
                 //buffer = OIIO::ImageBufAlgo::flip(buffer);
-                
+
                 buffer.write(path);
 
                 save_window = false;
@@ -269,9 +297,9 @@ int main(int, char**)
 
         }
 
-        
+
         {
-            ImGui::Begin("Infos");                          
+            ImGui::Begin("Infos");
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
@@ -279,7 +307,7 @@ int main(int, char**)
         // Camera
         {
             ImGui::Begin("Camera");
-            
+
             static float campos[3];
             static float camaim[3];
 
@@ -295,7 +323,7 @@ int main(int, char**)
             ImGui::SliderFloat("Bokeh Power", &bokeh_power, 0, 10);
             ImGui::InputFloat("Focus Distance", &focus_distance, 0, 10000);
             ImGui::InputFloat2("Anamoprhic", anamorphic, 0.0f, 2.0f);
-            if(ImGui::Button("Submit Changes")) change = true;
+            if (ImGui::Button("Submit Changes")) change = true;
 
             if (change)
             {
