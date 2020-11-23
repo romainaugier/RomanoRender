@@ -356,5 +356,11 @@ void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int&
 }
 
 
+auto get_time()
+{
+    auto start = std::chrono::system_clock::now();
+    return start;
+}
+
 #endif
 

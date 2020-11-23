@@ -45,8 +45,11 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         float hit_reflectance = mats[hit_mat_id].reflectance;
         float hit_metallic = mats[hit_mat_id].metallic;
 
-        vec3 hit_normal = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z).normalize();
+        Vertex n;
+        rtcInterpolate0(rtcGetGeometry(g_scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, &n.x, 3);
 
+        vec3 hit_normal = vec3(n.x, n.y, n.z);
+        //vec3 hit_normal = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z).normalize();
 
         if (mats[hit_mat_id].islight)
         {
@@ -483,8 +486,8 @@ void progressive_render(int s, color_t* pixels, render_settings& settings, camer
     std::string sample_perf = "Rendered " + std::to_string(1) + " sample in " + std::to_string(elapsed.count()) + " seconds !";
     std::string sample_enum = "Rendered " + std::to_string(s) + " spp";
 
-    if (settings.printer.level == 3) settings.printer.print(sample_perf);
-    if (settings.printer.level == 3) settings.printer.print(sample_enum);
+    //if (settings.printer.level == 3) settings.printer.print(sample_perf);
+    //if (settings.printer.level == 3) settings.printer.print(sample_enum);
 }
 
 

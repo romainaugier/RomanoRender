@@ -49,6 +49,18 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
                 vertices[i].z = object.Vertices[i].Position.Z;
             }
 
+            Vertex* normals = new Vertex[object.Vertices.size()];
+
+            for (int i = 0; i < object.Vertices.size(); i++)
+            {
+                normals[i].x = object.Vertices[i].Normal.X;
+                normals[i].y = object.Vertices[i].Normal.Y;
+                normals[i].z = object.Vertices[i].Normal.Z;
+            }
+
+            rtcSetGeometryVertexAttributeCount(geo, 1);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT3, normals, 0, sizeof(Vertex), object.Vertices.size());
+
             Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), object.Indices.size() / 3);
             
             int tri = 0;
@@ -92,6 +104,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
         }
     }
     
+    /*
     for (auto light : lights)
     {
         if (light.type == 2)
@@ -136,6 +149,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             id++;
         }
     }
+    */
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed = end - start;

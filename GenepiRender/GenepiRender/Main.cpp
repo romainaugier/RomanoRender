@@ -1,18 +1,9 @@
-// dear imgui: standalone example application for GLFW + OpenGL 3, using programmable pipeline
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-
-#include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 
 #define IMGUI_IMPL_OPENGL_LOADER_GL3W
 
-// About Desktop OpenGL function loaders:
-//  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
-//  Helper libraries are often used for this purpose! Here we are supporting a few common ones (gl3w, glew, glad).
-//  You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>            // Initialize with gl3wInit()
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
@@ -35,12 +26,8 @@ using namespace gl;
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
 
-// Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
 
-// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
-// To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
-// Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
 #if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
 #pragma comment(lib, "legacy_stdio_definitions")
 #endif
@@ -79,7 +66,6 @@ static void glfw_error_callback(int error, const char* description)
 
 int main(int, char**)
 {
-    // setups parameters
     int xres = 1000;
     int yres = 1000;
     int tile_number = 8;
@@ -92,7 +78,7 @@ int main(int, char**)
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
     const char* path = "D:/GenepiRender/Models/scene_drag.obj";
-
+    
     Logger log(3);
 
     render_settings settings(xres, yres, samples, bounces, filename, log, tile_number);
@@ -104,6 +90,12 @@ int main(int, char**)
 
     light square(2, true, 150.0f, vec3(1.0f), vec3(-5.0f, 15.0f, -5.0f), 10.0f, 10.0f, vec3(0, -1, 0));
     lights.push_back(square);
+
+    light dome(3, 2.0f, vec3(1.0f), vec3(0.0f));
+    lights.push_back(dome);
+
+    light dir(1, 10.0f, vec3(1.0f), vec3(-1, -1, 0), 10.0f);
+    //lights.push_back(dir);
 
     RTCDevice g_device = initializeDevice();
     RTCScene g_scene = rtcNewScene(g_device);
@@ -122,28 +114,18 @@ int main(int, char**)
     color_t* new_pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
 
 
-
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
 
-    // Decide GL+GLSL versions
-#ifdef __APPLE__
-    // GL 3.2 + GLSL 150
-    const char* glsl_version = "#version 150";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
-#else
-    // GL 3.0 + GLSL 130
+
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
-#endif
+
 
     // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(1920, 1080, "Romano Render", NULL, NULL);
@@ -180,12 +162,9 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer bindings
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -211,6 +190,10 @@ int main(int, char**)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
+   
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -225,6 +208,9 @@ int main(int, char**)
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
+        // progressive render
+        auto start = get_time();
+
         if (render)
         {
             progressive_render(s, pixels, settings, cam, g_scene, materials, lights, samples, bounces);
@@ -238,12 +224,18 @@ int main(int, char**)
                     new_pixels[x + y * xres].B = pixels[x + y * xres].B / s;
                 }
             }
-
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
+            glBindTexture(GL_TEXTURE_2D, image_texture);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, new_pixels);
+            glBindTexture(GL_TEXTURE_2D, 0);
             s++;
         }
 
+        auto end = get_time();
+        std::chrono::duration<double> elapsed = end - start;
 
+        double render_1spp_time = elapsed.count();
+
+        // render view
         {
             ImGui::Begin("RenderView");
 
@@ -272,12 +264,12 @@ int main(int, char**)
             ImGui::End();
         }
 
-
+        // save window
         if (save_window)
         {
             ImGui::Begin("Save Image", &save_window);
 
-            static char path[128] = "D:/image.png";
+            static char path[256] = "D:/image.png";
 
             ImGui::InputText("File Path", path, IM_ARRAYSIZE(path));
 
@@ -297,14 +289,17 @@ int main(int, char**)
 
         }
 
-
+        // info window
         {
             ImGui::Begin("Infos");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+            ImGui::Text("Average per sample time is %f seconds", render_1spp_time);
+            ImGui::Text("Rendered %i SPP", s);
+            
             ImGui::End();
         }
 
-        // Camera
+        // camera window
         {
             ImGui::Begin("Camera");
 
@@ -322,7 +317,7 @@ int main(int, char**)
             ImGui::InputInt("Focal Length", &focal_length, 0, 1000);
             ImGui::SliderFloat("Bokeh Power", &bokeh_power, 0, 10);
             ImGui::InputFloat("Focus Distance", &focus_distance, 0, 10000);
-            ImGui::InputFloat2("Anamoprhic", anamorphic, 0.0f, 2.0f);
+            ImGui::InputFloat2("Anamoprhic", anamorphic, 0, 5);
             if (ImGui::Button("Submit Changes")) change = true;
 
             if (change)
@@ -350,7 +345,7 @@ int main(int, char**)
             ImGui::End();
         }
 
-        // Light
+        // light editor window
         {
             ImGui::Begin("Light Editor");
 
@@ -382,6 +377,9 @@ int main(int, char**)
                 lights[light_id].orientation.x = light_orientation[0];
                 lights[light_id].orientation.y = light_orientation[1];
                 lights[light_id].orientation.z = light_orientation[2];
+                lights[light_id].direction.x = light_orientation[0];
+                lights[light_id].direction.y = light_orientation[1];
+                lights[light_id].direction.z = light_orientation[2];
                 lights[light_id].size_x = light_size[0];
                 lights[light_id].size_y = light_size[2];
 
@@ -393,7 +391,7 @@ int main(int, char**)
             }
         }
 
-        // Materials
+        // material editor window
         {
             ImGui::Begin("Material Editor");
 
@@ -449,6 +447,7 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
         int display_w, display_h;
+
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
