@@ -77,6 +77,24 @@ inline float CosDPhi(vec3& wa, vec3& wb) { return clamp((wa.x * wb.x + wa.y * wb
 inline vec3 SchlickWeight(vec3& f0, float& h) { return f0 + (1.0f - f0) * std::pow(1 - h, 5); }
 inline float SchlickR0FromRelativeIOR(float eta) { return square(eta - 1.0f) / square(eta + 1.0f); }
 
+float FresnelReflectionCoef(float& n2, vec3& normal, vec3& incident)
+{
+	float n1 = 1.0f;
+	float r0 = (n1 - n2) / (n1 + n2);
+	float cosX = -dot(normal, incident);
+
+	if (n1 > n2)
+	{
+		float n = n1 / n2;
+		float sint2 = n * n * (1.0f - cosX * cosX);
+
+		if (sint2 > 0.9999f) return 1.0f;
+		cosX = sqrt(1.0f - sint2);
+	}
+	float x = 1.0f - cosX;
+	return r0 + (1.0f - r0) * x * x * x * x * x;
+}
+
 
 float RoughnessToAlpha(float roughness) {
 	roughness = std::max(roughness, (float)1e-3);
