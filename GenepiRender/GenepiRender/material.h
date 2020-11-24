@@ -28,6 +28,8 @@ public:
         roughness(_roughness),
         refraction(_refrac)
     {
+        diffuse_roughness = 0.0f;
+        ior = 1.0f;
     }
 
     material(int& id, vec3 color_parm, float roughness_parm, float reflectance_parm, float metallic_parm, float sheen_parm, float clearcoat_parm, float anisotropic_parm) :
@@ -48,6 +50,7 @@ public:
     vec3 normal;
 
     vec3 clr;
+    float diffuse_roughness;
 
     float roughness;
     vec3 reflection_color;

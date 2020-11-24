@@ -40,10 +40,12 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         float hit_albedo = 1.0f;
 
         new_color = mats[hit_mat_id].clr;
+        float hit_diff_roughness = mats[hit_mat_id].diffuse_roughness;
         float hit_roughness = mats[hit_mat_id].roughness;
         float hit_refraction = mats[hit_mat_id].refraction;
         float hit_reflectance = mats[hit_mat_id].reflectance;
         float hit_metallic = mats[hit_mat_id].metallic;
+        float ior = mats[hit_mat_id].ior;
 
         Vertex n;
         rtcInterpolate0(rtcGetGeometry(g_scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, &n.x, 3);
@@ -60,7 +62,7 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         vec3 hit_pos = vec3(rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z) + rayhit.ray.tfar * vec3(rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z);
 
         // reflection
-        
+        /*
         if (hit_roughness < 1.0)
         {
             if (depth[1] == 0) return vec3(0.f);
@@ -97,77 +99,98 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
 
             color = cast_ray(new_ray, color, mats, g_scene, lights, new_depth, samples) * mats[hit_mat_id].refraction_color;
         }
-
+        */
         // direct lighting
-        else
+        //else
+        //{
+        vec3 kd(1.0f);
+
+        if (depth[0] == 0) return vec3(0.f);
+
+        for (auto light : lights)
         {
-            if (depth[0] == 0) return vec3(0.f);
-
-            for (auto light : lights)
+            for (int i = 0; i < samples[1]; i++)
             {
-                for (int i = 0; i < samples[1]; i++)
+                vec3 area_sample_position(0.0f);
+                vec3 ray_dir = return_raydir(light, hit_pos, hit_normal, area_sample_position);
+
+                ray new_ray(hit_pos, ray_dir);
+
+                float distance = 10000.0f;
+                float area_shadow = 1.0f;
+
+                if (light.type == 0) distance = dist(hit_pos, light.position) - 0.001f;
+
+                if (light.type == 2)
                 {
-                    vec3 area_sample_position(0.0f);
-                    vec3 ray_dir = return_raydir(light, hit_pos, hit_normal, area_sample_position);
-
-                    ray new_ray(hit_pos, ray_dir);
-
-                    float distance = 10000.0f;
-                    float area_shadow = 1.0f;
-
-                    if (light.type == 0) distance = dist(hit_pos, light.position) - 0.001f;
-
-                    if (light.type == 2)
-                    {
-                        if (dot(ray_dir, light.orientation) > 0) continue;
-                        vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
-                        distance = dist(hit_pos, area_sample_position) - 0.001f;
-                        float d = dot(light.orientation, ray_dir);
-                        area_shadow = -d;
-                    }
-
-                    RTCRay shadow;
-                    shadow.org_x = new_ray.origin().x;
-                    shadow.org_y = new_ray.origin().y;
-                    shadow.org_z = new_ray.origin().z;
-                    shadow.dir_x = new_ray.direction().x;
-                    shadow.dir_y = new_ray.direction().y;
-                    shadow.dir_z = new_ray.direction().z;
-                    shadow.tnear = 0.001f;
-                    shadow.tfar = distance;
-                    shadow.mask = -1;
-                    shadow.flags = 0;
-
-                    rtcOccluded1(g_scene, &context, &shadow);
-
-                    if (shadow.tfar > 0.0f)
-                    {
-                        // Cook-Torrance
-                        //vec3 H = (r.direction() + ray_dir) / 2.f;
-                        //float G = std::min(1.0f, (2 * dot(hit_normal, H) * dot(hit_normal, r.direction()) / dot(r.direction(), H), (2 * dot(hit_normal, H) * dot(hit_normal, ray_dir)) / dot(r.direction(), H)));
-                        //float D = 1.0f / ((new_color * new_color) * std::pow(cos(dot(H, hit_normal)), 4))
-
-                        // lambert
-                        color += new_color * (0.8f / float(M_PI)) * return_light_int(light, distance) * std::max(0.f, dot(hit_normal, ray_dir)) * area_shadow / samples[1];
-
-                        // oren-nayar
-                    }
+                    if (dot(ray_dir, light.orientation) > 0) continue;
+                    vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
+                    distance = dist(hit_pos, area_sample_position) - 0.001f;
+                    float d = dot(light.orientation, ray_dir);
+                    area_shadow = -d;
                 }
 
+                RTCRay shadow;
+                shadow.org_x = new_ray.origin().x;
+                shadow.org_y = new_ray.origin().y;
+                shadow.org_z = new_ray.origin().z;
+                shadow.dir_x = new_ray.direction().x;
+                shadow.dir_y = new_ray.direction().y;
+                shadow.dir_z = new_ray.direction().z;
+                shadow.tnear = 0.001f;
+                shadow.tfar = distance;
+                shadow.mask = -1;
+                shadow.flags = 0;
+
+                rtcOccluded1(g_scene, &context, &shadow);
+
+                if (shadow.tfar > 0.0f)
+                {
+                    // Cook-Torrance
+                    //vec3 H = (r.direction() + ray_dir) / 2.f;
+                    //float G = std::min(1.0f, (2 * dot(hit_normal, H) * dot(hit_normal, r.direction()) / dot(r.direction(), H), (2 * dot(hit_normal, H) * dot(hit_normal, ray_dir)) / dot(r.direction(), H)));
+                    //float D = 1.0f / ((new_color * new_color) * std::pow(cos(dot(H, hit_normal)), 4))
+
+                    // lambert
+                    //color += new_color * (0.8f / float(M_PI)) * return_light_int(light, distance) * std::max(0.f, dot(hit_normal, ray_dir)) * area_shadow / samples[1];
+
+                    vec3 f0 = abs((1.0 - ior) / (1.0 + ior));
+                    f0 = f0 * f0;
+                    f0 = lerp(f0, new_color, hit_metallic);
+
+                    vec3 ks(0.0f);
+
+                    // oren-nayar
+                    vec3 tan, bitan;
+                    createBasis(hit_normal, tan, bitan);
+
+                    vec3 wo, wi, wm;
+                    worldToTangent(hit_normal, tan, bitan, ray_dir, -r.direction(), wo, wi, wm);
+
+                    float ax = hit_roughness;
+                    float ay = hit_roughness;
+
+                    vec3 specular = TorranceSparrow(wo, wi, ax, ay, f0, ks);
+
+                    kd = (1 - ks) * (1 - hit_metallic);
+
+                    vec3 diffuse = new_color * return_light_int(light, distance) * oren_nayar(hit_diff_roughness, 1.0f, wo, wi) * std::max(0.f, dot(hit_normal, ray_dir)) / samples[1];
+                    
+                    color = kd * diffuse * area_shadow + specular * ks;
+                }
             }
+        }
             
             
-            // indirect lighting
-            for (int i = 0; i < samples[2]; i++)
-            {
-                vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
-                ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
+        // indirect lighting
+        for (int i = 0; i < samples[2]; i++)
+        {
+            vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
+            ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
 
-                int new_depth[] = { depth[0] - 1, depth[1], depth[2] };
+            int new_depth[] = { depth[0] - 1, depth[1], depth[2] };
 
-                color += cast_ray(random_ray, color, mats, g_scene, lights, new_depth, samples) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color / samples[2];
-
-            }
+            color += cast_ray(random_ray, color, mats, g_scene, lights, new_depth, samples) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color / samples[2] * kd;
             
         }
     }

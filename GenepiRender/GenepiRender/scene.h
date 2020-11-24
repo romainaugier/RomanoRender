@@ -82,10 +82,10 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
 
             vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
 
-            float roughness = 1.0;
-            float refrac = 0.0;
+            float roughness = 1.0f;
+            float refrac = 0.0f;
 
-            if (id == 0) mat_color = vec3(1.0f, 1.0f, 1.0f);
+            //if (id == 0) mat_color = vec3(1.0f, 1.0f, 1.0f);
             //if (id == 0) refrac = 1.0f;
             //if (id == 0) roughness = 0.99;
             //if (id == 2) rand_color = vec3(0.f, 1.0f, 0.f);

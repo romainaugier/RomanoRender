@@ -66,7 +66,10 @@
     <ClInclude Include="math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bsdf.h">
+    <ClInclude Include="brdf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mat3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

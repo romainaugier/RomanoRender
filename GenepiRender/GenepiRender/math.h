@@ -1,5 +1,6 @@
 #pragma once
 #include "vec3.h"
+#include "utils.h"
 
 void createBasis(vec3& hit_normal, vec3& tangent, vec3& bitangent)
 {
@@ -13,9 +14,9 @@ void createBasis(vec3& hit_normal, vec3& tangent, vec3& bitangent)
 
 void worldToTangent(vec3& hit_normal, vec3& tangent, vec3& bitangent, vec3& l, vec3& v, vec3& wo, vec3& wi, vec3& wm)
 {
-	wo = (v.z * hit_normal + v.x * tangent + v.y * bitangent);
-	wi = (l.z * hit_normal + l.x * tangent + v.y * bitangent);
-	wm = (wo + wi);
+	wo = (v.z * hit_normal + v.x * tangent + v.y * bitangent).normalize();
+	wi = (l.z * hit_normal + l.x * tangent + v.y * bitangent).normalize();
+	wm = (wo + wi).normalize();
 }
 
 
@@ -24,4 +25,62 @@ vec3 tangentToWorld(vec3& hit_normal, vec3& tangent, vec3& bitangent, vec3& t)
 	vec3 wdir;
 	wdir = tangent * t.x + hit_normal * t.y + bitangent * t.z;
 	return wdir;
+}
+
+
+inline float Log2(float x)
+{
+	const float invLog2 = 1.442695040888963387004650940071;
+	return std::log(x) * invLog2;
+}
+inline float square(float x) { return x * x; }
+
+inline float Saturate(float x)
+{
+	if (x < 0.0f) {
+		return 0.0f;
+	}
+	else if (x > 1.0f) {
+		return 1.0f;
+	}
+
+	return x;
+}
+
+static float inv_pi = 0.31830988618379067154;
+
+
+// trig identities
+inline float CosTheta(vec3& w) { return w.z; }
+inline float Cos2Theta(vec3& w) { return w.z * w.z; }
+inline float AbsCosTheta(vec3& w) { return std::abs(w.z); }
+inline float Sin2Theta(vec3& w) { return std::max(0.0f, 1.0f - Cos2Theta(w)); }
+inline float SinTheta(vec3& w) { return sqrt(Sin2Theta(w)); }
+inline float TanTheta(vec3& w) { return SinTheta(w) / CosTheta(w); }
+inline float Tan2Theta(vec3& w) { return Sin2Theta(w) / Cos2Theta(w); }
+inline float CosPhi(vec3& w)
+{
+	float sinTheta = SinTheta(w);
+	return (sinTheta == 0) ? 1 : clamp(w.x / sinTheta, -1.0f, 1.0f);
+}
+inline float SinPhi(vec3& w)
+{
+	float sinTheta = SinTheta(w);
+	return (sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1.0f, 1.0f);
+}
+inline float Cos2Phi(vec3& w) { return CosPhi(w) * CosPhi(w); }
+inline float Sin2Phi(vec3& w) { return SinPhi(w) * SinPhi(w); }
+inline float CosDPhi(vec3& wa, vec3& wb) { return clamp((wa.x * wb.x + wa.y * wb.y) / sqrt((wa.x * wa.x + wa.y * wa.y) * (wb.x * wb.x + wb.y * wb.y)), -1.0f, 1.0f); }
+
+
+// Schlicks/Fresnels
+inline vec3 SchlickWeight(vec3& f0, float& h) { return f0 + (1.0f - f0) * std::pow(1 - h, 5); }
+inline float SchlickR0FromRelativeIOR(float eta) { return square(eta - 1.0f) / square(eta + 1.0f); }
+
+
+float RoughnessToAlpha(float roughness) {
+	roughness = std::max(roughness, (float)1e-3);
+	float x = std::log(roughness);
+	return 1.62142f + 0.819955f * x + 0.1734f * x * x +
+		0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
 }

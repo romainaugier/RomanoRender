@@ -77,7 +77,7 @@ int main(int, char**)
     float variance_threshold = 0.001;
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
-    const char* path = "D:/GenepiRender/Models/scene_drag.obj";
+    const char* path = "D:/GenepiRender/Models/dragon_2_scene.obj";
     
     Logger log(3);
 
@@ -92,7 +92,7 @@ int main(int, char**)
     lights.push_back(square);
 
     light dome(3, 2.0f, vec3(1.0f), vec3(0.0f));
-    lights.push_back(dome);
+    //lights.push_back(dome);
 
     light dir(1, 10.0f, vec3(1.0f), vec3(-1, -1, 0), 10.0f);
     //lights.push_back(dir);
@@ -399,16 +399,20 @@ int main(int, char**)
             static float material_color[3];
             static float reflection_color[3];
             static float refraction_color[3];
+            static float diff_roughness;
             static float refrac;
             static float random_refrac;
             static float roughness;
             static float metallic;
+            static float ior;
             static float reflectance;
             static bool change = false;
 
             ImGui::InputInt("Material ID", &mat_id);
             ImGui::InputFloat3("Material Color", material_color);
+            ImGui::InputFloat("Diffuse Roughness", &diff_roughness);
             ImGui::InputFloat("Roughness", &roughness);
+            ImGui::InputFloat("IOR", &ior);
             ImGui::InputFloat("Reflectance", &reflectance);
             ImGui::InputFloat("Metallic", &metallic);
             ImGui::InputFloat3("Reflection Color", reflection_color);
@@ -422,6 +426,10 @@ int main(int, char**)
                 materials[mat_id].clr.x = material_color[0];
                 materials[mat_id].clr.y = material_color[1];
                 materials[mat_id].clr.z = material_color[2];
+
+                materials[mat_id].diffuse_roughness = diff_roughness;
+
+                materials[mat_id].ior = ior;
 
                 materials[mat_id].roughness = roughness;
                 materials[mat_id].reflectance = reflectance;
