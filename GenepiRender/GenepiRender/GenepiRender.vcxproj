@@ -148,12 +148,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="bsdf.h" />
+    <ClInclude Include="brdf.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="include_all.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="mat3.h" />
     <ClInclude Include="material.h" />
     <ClInclude Include="math.h" />
     <ClInclude Include="matrix.h" />

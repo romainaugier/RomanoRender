@@ -82,10 +82,10 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
 
             vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
 
-            float roughness = 1.0;
-            float refrac = 0.0;
+            float roughness = 1.0f;
+            float refrac = 0.0f;
 
-            if (id == 0) mat_color = vec3(1.0f, 1.0f, 1.0f);
+            //if (id == 0) mat_color = vec3(1.0f, 1.0f, 1.0f);
             //if (id == 0) refrac = 1.0f;
             //if (id == 0) roughness = 0.99;
             //if (id == 2) rand_color = vec3(0.f, 1.0f, 0.f);
@@ -104,7 +104,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
         }
     }
     
-    /*
+    
     for (auto light : lights)
     {
         if (light.type == 2)
@@ -130,6 +130,18 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             vertices[3].y = light.v3.y;
             vertices[3].z = light.v3.z;
 
+            Vertex* normals = new Vertex[4];
+
+            for (int i = 0; i < 4; i++)
+            {
+                normals[i].x = light.orientation.x;
+                normals[i].y = light.orientation.y;
+                normals[i].z = light.orientation.z;
+            }
+
+            rtcSetGeometryVertexAttributeCount(geo, 1);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT3, normals, 0, sizeof(Vertex), 4);
+
             Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), 2);
 
             triangles[0].v0 = 0;
@@ -149,7 +161,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             id++;
         }
     }
-    */
+    
 
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed = end - start;

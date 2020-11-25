@@ -77,7 +77,7 @@ int main(int, char**)
     float variance_threshold = 0.001;
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
-    const char* path = "D:/GenepiRender/Models/scene_drag.obj";
+    const char* path = "D:/GenepiRender/Models/mustang_clean_2.obj";
     
     Logger log(3);
 
@@ -88,10 +88,11 @@ int main(int, char**)
 
     std::vector<light> lights;
 
-    light square(2, true, 150.0f, vec3(1.0f), vec3(-5.0f, 15.0f, -5.0f), 10.0f, 10.0f, vec3(0, -1, 0));
+    light square(2, true, 350.0f, vec3(1.0f), vec3(-10.0f, 25.0f, -10.0f), 20.0f, 20.0f, vec3(0, -1, 0));
     lights.push_back(square);
 
-    light dome(3, 2.0f, vec3(1.0f), vec3(0.0f));
+
+    light dome(3, 0.5f, vec3(0.2f, 0.6f, 0.75f), vec3(0.0f));
     lights.push_back(dome);
 
     light dir(1, 10.0f, vec3(1.0f), vec3(-1, -1, 0), 10.0f);
@@ -303,13 +304,13 @@ int main(int, char**)
         {
             ImGui::Begin("Camera");
 
-            static float campos[3];
-            static float camaim[3];
+            static float campos[3] = { cam.pos.x, cam.pos.y, cam.pos.z };
+            static float camaim[3] = { cam.lookat.x, cam.lookat.y, cam.lookat.z };
 
             static int focal_length = cam.focal_length;
             static float bokeh_power = cam.aperture;
             static float focus_distance = cam.focus_dist;
-            static float anamorphic[2];
+            static float anamorphic[2] = { cam.anamorphic_x, cam.anamorphic_y };
             static bool change = false;
 
             ImGui::InputFloat3("Camera Position", campos);
@@ -350,11 +351,11 @@ int main(int, char**)
             ImGui::Begin("Light Editor");
 
             static int light_id;
-            static float light_int;
-            static float light_color[3];
-            static float light_position[3];
-            static float light_orientation[3];
-            static float light_size[2];
+            static float light_int = lights[light_id].intensity;
+            static float light_color[3] = { lights[light_id].color.x, lights[light_id].color.y, lights[light_id].color.z };
+            static float light_position[3] = { lights[light_id].position.x, lights[light_id].position.y, lights[light_id].position.z };
+            static float light_orientation[3] = { lights[light_id].orientation.x, lights[light_id].orientation.y, lights[light_id].orientation.z };
+            static float light_size[2] = { lights[light_id].size_x, lights[light_id].size_y };
             static bool change = false;
 
             ImGui::InputInt("Light ID", &light_id);
@@ -396,25 +397,24 @@ int main(int, char**)
             ImGui::Begin("Material Editor");
 
             static int mat_id;
-            static float material_color[3];
-            static float reflection_color[3];
+            static float material_color[3] = { materials[mat_id].clr.x,  materials[mat_id].clr.y,  materials[mat_id].clr.z };
+            static float reflection_color[3] = { materials[mat_id].reflection_color.x,  materials[mat_id].reflection_color.y,  materials[mat_id].reflection_color.z };
             static float refraction_color[3];
-            static float refrac;
-            static float random_refrac;
-            static float roughness;
-            static float metallic;
-            static float reflectance;
+            static float diff_roughness = materials[mat_id].diffuse_roughness;
+            static float metallic = materials[mat_id].metallic;
+            static float roughness = materials[mat_id].roughness;
+            static float specular = materials[mat_id].specular;
+            static float ior = materials[mat_id].ior.x;
             static bool change = false;
 
             ImGui::InputInt("Material ID", &mat_id);
-            ImGui::InputFloat3("Material Color", material_color);
-            ImGui::InputFloat("Roughness", &roughness);
-            ImGui::InputFloat("Reflectance", &reflectance);
+            ImGui::InputFloat3("Diffuse Color", material_color);
+            ImGui::InputFloat("Diffuse Roughness", &diff_roughness);
+            ImGui::InputFloat("Specular", &specular);
+            ImGui::InputFloat("Specular Roughness", &roughness);
             ImGui::InputFloat("Metallic", &metallic);
+            ImGui::InputFloat("Ior", &ior);
             ImGui::InputFloat3("Reflection Color", reflection_color);
-            ImGui::InputFloat("Refraction", &refrac);
-            ImGui::InputFloat("Refraction Fuzziness", &random_refrac);
-            ImGui::InputFloat3("Refraction Color", refraction_color);
             if (ImGui::Button("Submit Changes")) change = true;
 
             if (change)
@@ -423,20 +423,17 @@ int main(int, char**)
                 materials[mat_id].clr.y = material_color[1];
                 materials[mat_id].clr.z = material_color[2];
 
+                materials[mat_id].diffuse_roughness = diff_roughness;
+
+                materials[mat_id].specular = specular;
                 materials[mat_id].roughness = roughness;
-                materials[mat_id].reflectance = reflectance;
                 materials[mat_id].metallic = metallic;
+                materials[mat_id].ior = vec3(ior);
 
                 materials[mat_id].reflection_color.x = reflection_color[0];
                 materials[mat_id].reflection_color.y = reflection_color[1];
                 materials[mat_id].reflection_color.z = reflection_color[2];
 
-                materials[mat_id].refraction_color.x = refraction_color[0];
-                materials[mat_id].refraction_color.y = refraction_color[1];
-                materials[mat_id].refraction_color.z = refraction_color[2];
-
-                materials[mat_id].refraction = refrac;
-                materials[mat_id].refraction_roughness = random_refrac;
 
                 reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
 

@@ -28,19 +28,13 @@ public:
         roughness(_roughness),
         refraction(_refrac)
     {
+        diffuse_roughness = 0.0f;
+        specular = 0.0f;
+        metallic = 0.0f;
+        ior = vec3(1.5f);
+        reflection_color = vec3(1.0f);
     }
 
-    material(int& id, vec3 color_parm, float roughness_parm, float reflectance_parm, float metallic_parm, float sheen_parm, float clearcoat_parm, float anisotropic_parm) :
-        clr(color_parm),
-        roughness(roughness_parm),
-        reflectance(reflectance_parm),
-        metallic(metallic_parm),
-        sheen(sheen_parm),
-        clearcoat(clearcoat_parm),
-        anisotropic(anisotropic_parm),
-        mat_id(id)
-    {
-    }
 
 public:
     int mat_id;
@@ -48,6 +42,7 @@ public:
     vec3 normal;
 
     vec3 clr;
+    float diffuse_roughness;
 
     float roughness;
     vec3 reflection_color;
@@ -57,16 +52,8 @@ public:
     vec3 refraction_color;
 
     float metallic;
-    float reflectance;
-    float sheen;
-    float clearcoat;
-    float clearcoatGloss;
-    float anisotropic;
-    float specularTint;
-    float ior;
-    float relativeIOR;
-    float flatness;
-    float specTrans;
+    float specular;
+    vec3 ior;
 };
 
 
