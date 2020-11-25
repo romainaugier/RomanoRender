@@ -77,7 +77,9 @@ int main(int, char**)
     float variance_threshold = 0.001;
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
-    const char* path = "D:/GenepiRender/Models/scene_drag_high.obj";
+
+    const char* path = "D:/GenepiRender/Models/mustang_clean_2.obj";
+
     
     Logger log(3);
 
@@ -88,14 +90,14 @@ int main(int, char**)
 
     std::vector<light> lights;
 
-    light square(2, true, 250.0f, vec3(1.0f), vec3(-5.0f, 15.0f, -5.0f), 10.0f, 10.0f, vec3(0, -1, 0));
+
+    light square(2, true, 350.0f, vec3(1.0f), vec3(-10.0f, 25.0f, -10.0f), 20.0f, 20.0f, vec3(0, -1, 0));
     lights.push_back(square);
 
-    light dome(3, 0.5f, vec3(0.2f, 0.6f, 0.75f), vec3(0.0f));
-    //lights.push_back(dome);
 
-    light dir(1, 10.0f, vec3(1.0f), vec3(-1, -1, 0), 10.0f);
-    //lights.push_back(dir);
+    light dome(3, 0.5f, vec3(0.2f, 0.6f, 0.75f), vec3(0.0f));
+    lights.push_back(dome);
+
 
     RTCDevice g_device = initializeDevice();
     RTCScene g_scene = rtcNewScene(g_device);

@@ -8,6 +8,8 @@
 // ray cast function used to render. Return a vec3 color
 vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g_scene, std::vector<light>& lights, int depth[], int samples[])
 {
+    if (depth[0] == 0 || depth[1] == 0 || depth[2] == 0) return vec3(0.0f);
+
     RTCIntersectContext context;
     rtcInitIntersectContext(&context);
 
@@ -117,8 +119,6 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
 
         vec3 wo, wi, wm;
 
-        if (depth[0] == 0) return vec3(0.f);
-
         for (auto light : lights)
         {
             for (int i = 0; i < samples[1]; i++)
@@ -158,23 +158,23 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
 
                 if (shadow.tfar > 0.0f)
                 {
-                    // oren-nayar
-                    //kd = (1 - ks) * (1 - hit_metallic);
-
                     worldToTangent(hit_normal, tan, bitan, ray_dir, -r.direction(), wo, wi, wm);
 
                     radiance = return_light_int(light, distance) * oren_nayar(hit_diff_roughness, 1.0f, wo, wi) * std::max(0.f, dot(hit_normal, ray_dir)) * area_shadow / samples[1];
 
-                    
+                    if (std::isnan(radiance.x) || std::isnan(radiance.y) || std::isnan(radiance.z))
+                    {
+                        color = vec3(color);
+                        color = vec3(0.0f);
+                    }
                 }
             }
         }
 
         vec3 new_ray_dir;
+
         new_ray_dir = reflect(r.direction(), hit_normal, hit_roughness);
-        //float d = dot(wi, wm);
-        //f0 = SchlickWeight(hit_ior, d);
-        //new_ray_dir = TorranceSparrow(wo, wi, hit_roughness, hit_roughness, f0, ks);
+
         ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
 
         int new_depth[] = { depth[0], depth[1] - 1, depth[2] };
@@ -187,22 +187,25 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         
 
         // indirect lighting
-        for (int i = 0; i < samples[2]; i++)
+        if (hit_metallic < 1.0f)
         {
-            vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
-            ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
+            for (int i = 0; i < samples[2]; i++)
+            {
+                vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
+                ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
 
-            int new_depth[] = { depth[0] - 1, depth[1], depth[2] };
+                color += cast_ray(random_ray, color, mats, g_scene, lights, new_depth, samples) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color * kd / samples[2];
 
-            color += cast_ray(random_ray, color, mats, g_scene, lights, new_depth, samples) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color / samples[2] * kd;
-
+            }
         }
 
         
-        //std::cout << f0 << "\n";
-        color += kd * (new_color * radiance) + specular * clamp(abs(f0) + hit_metallic, 0.02f, 1.0f) * hit_specular * hit_refl_color;
-        
-        
+        color += kd * (new_color * radiance) + specular * clamp(abs(f0) + hit_metallic, 0.02f, 1.0f) * hit_specular * hit_refl_color;            
+    }
+    
+    if (std::isnan(color.x) || std::isnan(color.y) || std::isnan(color.z))
+    {
+        color = vec3(0.5f);
     }
 
     return color;
@@ -271,7 +274,7 @@ void batch_render_tile(tile* cur_tile, render_settings& settings, camera& cam, R
 
     auto end_tile = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_tile = end_tile - start_tile;
-    std::string message = "Tile n°" + std::to_string(cur_tile->id) + " rendered in " + std::to_string(elapsed_tile.count()) + " seconds !";
+    std::string message = "Tile nÂ°" + std::to_string(cur_tile->id) + " rendered in " + std::to_string(elapsed_tile.count()) + " seconds !";
     if (settings.printer.level == 3) settings.printer.print(message);
 }
 
@@ -487,9 +490,11 @@ void render_p(int s, color_t* pixels, int x, int y, render_settings& settings, c
 
     ray ray(new_pos, (dir - new_pos).normalize());
 
-    col = (cast_ray(ray, col, mats, g_scene, lights, bounces, samples));
+    col = cast_ray(ray, col, mats, g_scene, lights, bounces, samples);
 
     //col = HableToneMap(col);
+
+    
 
     pixels[x + y * settings.xres].R += pow(col.x, 1.0 / 2.2);
     pixels[x + y * settings.xres].G += pow(col.y, 1.0 / 2.2);
