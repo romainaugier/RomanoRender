@@ -1,4 +1,4 @@
-# GenepiRender
+# Romano Render
 
 Monte Carlo PathTracer
 My first project using C++, the goal of this is to learn both this language, a bit of software engineering and more about rendering, maths and computer graphics.
