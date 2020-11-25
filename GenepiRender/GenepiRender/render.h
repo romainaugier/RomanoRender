@@ -194,20 +194,17 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
                 vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
                 ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
 
-                int new_depth[] = { depth[0] - 1, depth[1], depth[2] };
-
                 color += cast_ray(random_ray, color, mats, g_scene, lights, new_depth, samples) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color * kd / samples[2];
 
             }
         }
+
         
-        color += kd * (new_color * radiance) + specular * clamp(abs(f0) + hit_metallic, 0.02f, 1.0f) * hit_specular * hit_refl_color;      
-        
+        color += kd * (new_color * radiance) + specular * clamp(abs(f0) + hit_metallic, 0.02f, 1.0f) * hit_specular * hit_refl_color;            
     }
     
     if (std::isnan(color.x) || std::isnan(color.y) || std::isnan(color.z))
     {
-        //color = vec3(color);
         color = vec3(0.5f);
     }
 
@@ -277,7 +274,7 @@ void batch_render_tile(tile* cur_tile, render_settings& settings, camera& cam, R
 
     auto end_tile = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_tile = end_tile - start_tile;
-    std::string message = "Tile n°" + std::to_string(cur_tile->id) + " rendered in " + std::to_string(elapsed_tile.count()) + " seconds !";
+    std::string message = "Tile nÂ°" + std::to_string(cur_tile->id) + " rendered in " + std::to_string(elapsed_tile.count()) + " seconds !";
     if (settings.printer.level == 3) settings.printer.print(message);
 }
 
