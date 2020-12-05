@@ -23,21 +23,26 @@ public:
     {        
     }
 
-    material(int& id, vec3 color_parm, float _roughness, float _refrac) :
+    material(int& id, std::string _name, vec3 color_parm, float _roughness, float _refrac) :
+        name(_name),
         clr(color_parm),
         roughness(_roughness),
         refraction(_refrac)
     {
         diffuse_roughness = 0.0f;
         specular = 0.0f;
+        reflectance = 0.0f;
         metallic = 0.0f;
-        ior = vec3(1.5f);
+        ior = vec3(1.0f);
         reflection_color = vec3(1.0f);
+        specular_color = vec3(1.0f);
+        refraction_color = vec3(1.0f);
     }
 
 
 public:
     int mat_id;
+    std::string name;
     bool islight;
     vec3 normal;
 
@@ -52,7 +57,9 @@ public:
     vec3 refraction_color;
 
     float metallic;
+    float reflectance;
     float specular;
+    vec3 specular_color;
     vec3 ior;
 };
 

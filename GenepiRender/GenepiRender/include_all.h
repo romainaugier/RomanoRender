@@ -23,3 +23,4 @@
 #include "settings.h"
 #include "log.h"
 #include "brdf.h"
+#include "stats.h"

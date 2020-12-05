@@ -13,16 +13,14 @@
 #include "ray.h"
 #include "utils.h"
 #include "light.h"
+#include "stats.h"
 
 
 #ifndef SCENE
 #define SCENE
 
 
-float infinity = std::numeric_limits<float>::infinity();
-
-
-void load_scene(std::vector<material>& materials, std::vector<light>& lights, RTCScene g_scene, RTCDevice g_device, const char* path)
+void load_scene(std::vector<material>& materials, std::vector<light>& lights, RTCScene g_scene, RTCDevice g_device, const char* path, stats& stat)
 {
     std::cout << "Loading scene...." << std::endl;
     auto start = std::chrono::system_clock::now();
@@ -71,6 +69,8 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
                 triangles[tri].v1 = object.Indices[i + 1];
                 triangles[tri].v2 = object.Indices[i + 2];
 
+                stat.add_poly();
+
                 tri++;
             }
 
@@ -78,7 +78,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             std::mt19937 mt(rd());
             std::uniform_real_distribution<float> dist(0.25f, 0.75f);
             //vec3 rand_color(dist(mt));
-            vec3 rand_color(1.0f);
+            vec3 rand_color(0.5f);
 
             vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
 
@@ -91,7 +91,8 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             //if (id == 2) rand_color = vec3(0.f, 1.0f, 0.f);
             //if (id == 4) rand_color = vec3(1.0f, 0.f, 0.f);
 
-            material new_material(id, mat_color, roughness, refrac);
+
+            material new_material(id, object.MeshName, mat_color, roughness, refrac);
 
             new_material.islight = false;
 

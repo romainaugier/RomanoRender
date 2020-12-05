@@ -102,3 +102,14 @@ float RoughnessToAlpha(float roughness) {
 	return 1.62142f + 0.819955f * x + 0.1734f * x * x +
 		0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
 }
+
+
+inline float fit01(float x, float a, float b) { return x * (b - a) + a; }
+
+
+inline float PowerHeuristic(int nf, float fpdf, int ng, float gpdf)
+{
+	float f = nf * fpdf;
+	float g = ng * gpdf;
+	return (f * f) / (f * f + g * g);
+}

@@ -39,49 +39,48 @@ float oren_nayar(float sigma, float R, vec3& wo, vec3& wi)
 }
 
 
-float BeckMannDistribution(vec3& wh, float& ax, float& ay)
+float BeckmannNormalDistribution();
+
+
+float GGXNormalDistribution(float& NdotH, float& roughness)
 {
-	float tan2Theta = Tan2Theta(wh);
-	if (std::isinf(tan2Theta)) return 0.0f;
-	float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
-	return std::exp(-tan2Theta * (Cos2Phi(wh) / (ax * ax) + Sin2Phi(wh) / (ay * ay))) / (M_PI * ax * ay * cos4Theta);
+	float a2 = roughness * roughness;
+	float d = ((NdotH * a2 - NdotH) * NdotH + 1.0f);
+	return a2 / (d * d * M_PI);
 }
 
 
-float Lambda(vec3& w, float& ax, float& ay)
+float SchlickMaskingTerm(float& NdotL, float& NdotV, float& roughness)
 {
-	float absTanTheta = abs(TanTheta(w));
-	if (std::isinf(absTanTheta)) return 0.0f;
-	float alpha = sqrt(Cos2Phi(w) * ax * ax + Sin2Phi(w) * ay * ay);
-	float a = 1.0f / (alpha * absTanTheta);
-	if (a >= 1.6f) return 0.0f;
-	return (1.0F - 1.259f * a + 0.396 * a * a) / (3.535f * a + 2.181f * a * a);
+	float k = roughness * roughness / 2.0f;
+
+	float g_v = NdotV / (NdotV * (1.0f - k) + k);
+	float g_l = NdotL / (NdotL * (1.0f - k) + k);
+	return g_v * g_l;
 }
 
 
-float G1(vec3& w, float& ax, float& ay)
+vec3 SchlickFresnel(vec3& f0, float LdotH)
 {
-	return 1.0f / (1.0f + Lambda(w, ax, ay));
+	return f0 + (vec3(1.0f) - f0) * pow(1.0f - LdotH, 5.0f);
 }
 
 
-float G(vec3& wo, vec3& wi, float& ax, float& ay)
+vec3 GGXMicrofacet(vec3& hit_normal, float& roughness)
 {
-	return 1.0f / (1.0f + Lambda(wo, ax, ay) + Lambda(wi, ax, ay));
-}
+	float r0 = generate_random_float();
+	float r1 = generate_random_float();
 
+	vec3 up(0.0f, 1.0f, 0.0f);
+	if (dot(up, hit_normal) > 0.9f) up = vec3(0.0f, 0.0f, 1.0f);
 
-vec3 TorranceSparrow(vec3& wo, vec3& wi, float& ax, float& ay, vec3& f0, vec3& ks)
-{
-	float costhetaO = AbsCosTheta(wo), cosThetaI = AbsCosTheta(wi);
-	vec3 wh = wi + wo;
-	if (cosThetaI == 0.0f || costhetaO == 0.0f) return 0.0f;
-	if (wh.x == 0.0f && wh.y == 0.0f && wh.z == 0.0f) return 0.0f;
+	vec3 b = cross(hit_normal, up).normalize();
+	vec3 t = cross(b, hit_normal);
+	
+	float a2 = roughness * roughness;
+	float cosThetaH = sqrt(std::max(0.0f, (1.0f - r0) / ((a2 - 1.0f) * r0 + 1.0f)));
+	float sinThetaH = sqrt(std::max(0.0f, 1.0f - cosThetaH * cosThetaH));
+	float phiH = r1 * M_PI * 2.0f;
 
-	wh = wh.normalize();
-	float d = dot(wo, wh);
-	vec3 F = SchlickWeight(f0, d);
-	ks += F;
-
-	return BeckMannDistribution(wh, ax, ay) * G(wo, wi, ax, ay) * F / (4 * cosThetaI * costhetaO);
+	return t * (sinThetaH * cos(phiH)) + b * (sinThetaH * sin(phiH)) + hit_normal * cosThetaH;
 }

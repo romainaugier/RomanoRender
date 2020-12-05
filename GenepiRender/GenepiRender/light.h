@@ -1,8 +1,12 @@
 #pragma once
 #include "vec3.h"
+#include "OpenImageIO/imagebuf.h"
+#include "utils.h"
+#include "math.h"
 
 #ifndef LIGHT
 #define LIGHT
+
 
 /*
 light types :
@@ -13,6 +17,7 @@ light types :
 - spot light
 */
 
+
 class light
 {
 public:
@@ -22,19 +27,37 @@ public:
 	int temperature;
 	vec3 position;
 
-	//directional light
+	// directional light
 	vec3 direction;
 	float angle;
 
-	//square lights
+	// square lights
 	bool visible;
 	float size_x;
 	float size_y;
 	vec3 orientation;
 	vec3 v0, v1, v2, v3;
+	vec3 min, max;
+
+	// ambien light
+	OIIO::ImageBuf hdri_map;
+	bool has_map;
+	int xres;
+	int yres;
+
 
 public:
 	light() {}
+
+	light(int _type, float int_, const char* file) :
+		type(_type),
+		intensity(int_)
+	{
+		hdri_map = OIIO::ImageBuf(file);
+		xres = hdri_map.oriented_full_width();
+		yres = hdri_map.oriented_full_height();
+		has_map = true;
+	}
 
 	light(int _type, float int_, vec3 col, vec3 pos) :
 		type(_type),
@@ -42,7 +65,9 @@ public:
 		color(col),
 		position(pos),
 		direction(pos)
-	{}
+	{
+		has_map = false;
+	}
 
 	light(int _type, float int_, vec3 col, vec3 dir, float angle) :
 		type(_type),
@@ -71,6 +96,20 @@ public:
 		v1 = v0 + cross(o, up).normalize() * sizex;
 		v2 = v0 - cross(o, cross(o, up)).normalize() * sizey;
 		v3 = v1 + v2 - v0;
+
+		vec3 positions[] = { v0, v1, v2, v3 };
+		min = vec3(infinity);
+		max = vec3(-infinity);
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (positions[i].x < min.x) min.x = positions[i].x;
+			if (positions[i].x > max.x) max.x = positions[i].x;
+			if (positions[i].y < min.y) min.y = positions[i].y;
+			if (positions[i].y > max.y) max.y = positions[i].y;
+			if (positions[i].z < min.z) min.z = positions[i].z;
+			if (positions[i].z > max.z) max.z = positions[i].z;
+		}
 	}
 
 	vec3 point_light_intensity(float d)
@@ -101,12 +140,6 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 		vec3 y = cross(-light.direction, z);
 		vec3 rand_pos = z * light.angle * cos(random_angle) + y * light.angle * sin(random_angle) + position;
 
-
-		// deprecated
-		//vec3 rand = random_ray_in_hemisphere(hit_normal);
-		//float angle = light.angle;
-		//dir = lerp(-light.direction, rand, angle);
-
 		dir = rand_pos - hit_pos;
 		dir = dir.normalize();
 	}
@@ -115,15 +148,14 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 	{
 		float w0 = generate_random_float();
 		float w1 = generate_random_float();
-		float difw0 = 1 - w0;
-		float difw1 = 1 - w1;
-		//float w2 = generate_random_float(0.f, 1.f);
-		//float w3 = generate_random_float(0.f, 1.f);
+		float w2 = generate_random_float();
+		//float w3 = generate_random_float();
 
 		vec3 position(0.0f);
 
-		dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4;
-
+		//dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4;
+		//dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v0, light.v3, w1));
+		dir = vec3(fit01(w0, light.min.x, light.max.x), fit01(w1, light.min.y, light.max.y), fit01(w2, light.min.z, light.max.z));
 
 		area_sample_position = dir;
 
@@ -150,7 +182,7 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 }
 
 
-vec3 return_light_int(light& light, float& d)
+vec3 return_light_int(light& light, vec3& raydir, float& d)
 {
 	if (light.type == 0)
 	{
@@ -159,9 +191,32 @@ vec3 return_light_int(light& light, float& d)
 
 	if (light.type == 2)
 	{
-
 		return light.intensity * light.color / (d * d);
+	}
 
+	if (light.type == 3)
+	{
+		if (light.has_map)
+		{
+			vec3 invtan = vec3(0.1591, 0.3183, 0.0);
+			vec3 uv = vec3(atan2(raydir.z, raydir.x), asin(raydir.y), 0.0f);
+			uv = uv * invtan;
+			uv += 0.5f;
+
+			int x = light.xres * uv.x;
+			int y = light.yres * uv.y;
+
+			float pixel[3];
+			light.hdri_map.OIIO::ImageBuf::getpixel(light.xres - x, light.yres - y, 0, pixel);
+
+			vec3 color = vec3(pixel[0], pixel[1], pixel[2]);
+
+			return color * light.intensity;
+		}
+		else
+		{
+			return light.color * light.intensity;
+		}
 	}
 
 	else
@@ -169,5 +224,6 @@ vec3 return_light_int(light& light, float& d)
 		return light.intensity * light.color;
 	}
 }
+
 
 #endif

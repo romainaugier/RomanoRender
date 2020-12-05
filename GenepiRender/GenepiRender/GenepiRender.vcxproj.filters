@@ -72,6 +72,9 @@
     <ClInclude Include="mat3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

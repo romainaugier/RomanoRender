@@ -66,37 +66,50 @@ static void glfw_error_callback(int error, const char* description)
 
 int main(int, char**)
 {
-    int xres = 1000;
-    int yres = 1000;
+    int xres = 1280;
+    int yres = 720;
     int tile_number = 8;
     int unified_samples = 32;
     int nee_samples = 1;
     int gi_samples = 1;
     int samples[] = { unified_samples, nee_samples, gi_samples };
-    int bounces[] = { 3, 3, 10 };
+    int bounces[] = { 6, 6, 10 };
     float variance_threshold = 0.001;
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
-
-    const char* path = "D:/GenepiRender/Models/mustang_clean_2.obj";
-
+    //const char* path = "D:/GenepiRender/Models/1964_shelby_cobra_daytona.obj";
+    const char* path = "D:/GenepiRender/Models/sphere.obj";
     
     Logger log(3);
-
+    stats render_stats(0);
     render_settings settings(xres, yres, samples, bounces, filename, log, tile_number);
-    //camera cam(vec3(14.0f, 3.0f, 1.0f), vec3(-2.2f, 3.0f, -2.5f), 35, settings.xres, settings.yres, 0.075f, 14.0f); // pixar kitchen
     camera cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
 
 
     std::vector<light> lights;
 
-
-    light square(2, true, 350.0f, vec3(1.0f), vec3(-10.0f, 25.0f, -10.0f), 20.0f, 20.0f, vec3(0, -1, 0));
+    light square(2, true, 350.0f, vec3(1.0f), vec3(-2.5f, 15.0f, -2.5f), 5.0f, 5.0f, vec3(0, -1, 0));
     lights.push_back(square);
 
+    light front(2, true, 400.0f, vec3(1.0f), vec3(-10.0f, 5.0f, 40.0f), 20.0f, 10.0f, vec3(0, 0, -1));
+    //lights.push_back(front);
 
-    light dome(3, 0.5f, vec3(0.2f, 0.6f, 0.75f), vec3(0.0f));
-    lights.push_back(dome);
+    light back(2, true, 400.0f, vec3(1.0f), vec3(-10.0f, 5.0f, -40.0f), 20.0f, 10.0f, vec3(0, 0, 1));
+    //lights.push_back(back);
+
+    //light square2(2, true, 350.0f, vec3(1.0f), vec3(30.0f, 7.5f, -5.0f), 10.0f, 10.0f, vec3(-1, 0, 0));
+    //lights.push_back(square2);
+
+    light dir(1, 10.0f, vec3(1.0f), vec3(1.0f, -1.0f, -0.6f), 1.0f);
+    //lights.push_back(dir);
+    //light dir2(1, 9.0f, vec3(1.0f, 0.6f, 0.2f), vec3(1.0f, -1.0f, -0.6f), 3.0f);
+    //lights.push_back(dir2);
+
+    light dome(3, 1.0f, "D:/Ressources/HDRIs/pond_2k.hdr");
+    //lights.push_back(dome);
+
+    light env(3, 1.0f, vec3(1.0f), vec3(0.0f));
+    //lights.push_back(env);
 
 
     RTCDevice g_device = initializeDevice();
@@ -107,7 +120,7 @@ int main(int, char**)
 
     std::vector<material> materials;
 
-    load_scene(materials, lights, g_scene, g_device, path);
+    load_scene(materials, lights, g_scene, g_device, path, render_stats);
     rtcCommitScene(g_scene);
 
     //batch_render_omp(settings, cam, g_scene, materials, lights);
@@ -168,6 +181,66 @@ int main(int, char**)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
 
+    // style
+    ImGuiStyle* style = &ImGui::GetStyle();
+
+    style->WindowPadding = ImVec2(15, 15);
+    style->WindowRounding = 5.0f;
+    style->FramePadding = ImVec2(5, 5);
+    style->FrameRounding = 4.0f;
+    style->ItemSpacing = ImVec2(12, 8);
+    style->ItemInnerSpacing = ImVec2(8, 6);
+    style->IndentSpacing = 25.0f;
+    style->ScrollbarSize = 15.0f;
+    style->ScrollbarRounding = 9.0f;
+    style->GrabMinSize = 5.0f;
+    style->GrabRounding = 3.0f;
+
+    style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
+    style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
+    style->Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
+    style->Colors[ImGuiCol_ChildBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
+    style->Colors[ImGuiCol_PopupBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
+    //style->Colors[ImGuiCol_Border] = ImVec4(0.80f, 0.80f, 0.83f, 0.88f);
+    style->Colors[ImGuiCol_BorderShadow] = ImVec4(0.92f, 0.91f, 0.88f, 0.00f);
+    style->Colors[ImGuiCol_FrameBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+    style->Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
+    style->Colors[ImGuiCol_FrameBgActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    style->Colors[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+    style->Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(1.00f, 0.98f, 0.95f, 0.75f);
+    style->Colors[ImGuiCol_TitleBgActive] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
+    style->Colors[ImGuiCol_MenuBarBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+    style->Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+    style->Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
+    style->Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    style->Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
+    //style->Colors[ImGuiCol_ComboBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
+    style->Colors[ImGuiCol_CheckMark] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
+    style->Colors[ImGuiCol_SliderGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
+    style->Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
+    style->Colors[ImGuiCol_Button] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+    style->Colors[ImGuiCol_ButtonHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
+    style->Colors[ImGuiCol_ButtonActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    style->Colors[ImGuiCol_Header] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+    style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
+    //style->Colors[ImGuiCol_Column] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    //style->Colors[ImGuiCol_ColumnHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
+    //style->Colors[ImGuiCol_ColumnActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    style->Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    style->Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+    style->Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
+    //style->Colors[ImGuiCol_CloseButton] = ImVec4(0.40f, 0.39f, 0.38f, 0.16f);
+    //style->Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.40f, 0.39f, 0.38f, 0.39f);
+    //style->Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.40f, 0.39f, 0.38f, 1.00f);
+    style->Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
+    style->Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
+    style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
+    style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
+    style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
+    style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
+
+
     // Setup Platform/Renderer bindings
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -176,12 +249,25 @@ int main(int, char**)
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
 
     int s = 1;
+    int y = 0;
+
+    int mat_id = 0;
+
+    std::chrono::system_clock::time_point start;
+    std::chrono::system_clock::time_point end;
+    double render_1spp_time = 0.0;
+    double render_avg = 0.0;
+
+    int previous_y = 0;
     bool render = false;
     bool save_window = false;
 
+    ImVec2 uv0(0, 0);
+    ImVec2 uv1((float)yres / 1000.0f, (float)xres / 1000.0f);
+    float zoom = 1.0f;
     
     GLuint image_texture;
     glGenTextures(1, &image_texture);
@@ -189,8 +275,8 @@ int main(int, char**)
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
    
@@ -206,40 +292,118 @@ int main(int, char**)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+
+        std::cout << render_stats.rays << "\n";
+
+        // Render Settings Editor
+        {
+            ImGui::Begin("Render Settings");
+
+            static bool change = false;
+            static int resolution[2];
+
+            ImGui::InputInt2("Resolution", resolution);
+            if (ImGui::Button("Submit Changes")) change = true;
+
+            if (change)
+            {
+                settings.xres = resolution[0];
+                settings.yres = resolution[1];
+
+                uv0 = ImVec2(0, 0);
+                uv1 = ImVec2((float)settings.yres / 1000.0f, (float)settings.xres / 1000.0f);
+
+                cam.aspect = (float)settings.xres / (float)settings.yres;
+
+                delete[] pixels;
+                delete[] new_pixels;
+
+                pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
+                new_pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
+
+                std::cout << settings.xres * settings.yres * sizeof(pixels) << "\n";
+
+                glBindTexture(GL_TEXTURE_2D, image_texture);
+
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
+
+                glBindTexture(GL_TEXTURE_2D, 0);
+
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
+
+                change = false;
+            }
+
+            ImGui::End();
+        }
+
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
         // progressive render
-        auto start = get_time();
+        previous_y = y;
+
 
         if (render)
         {
-            progressive_render(s, pixels, settings, cam, g_scene, materials, lights, samples, bounces);
+            progressive_render(s, y, pixels, settings, cam, g_scene, materials, lights, samples, bounces, render_stats);
 
-            for (int y = 0; y < yres; y++)
+            for (int z = 0; z < settings.yres; z++)
             {
-                for (int x = 0; x < xres; x++)
+                for (int x = 0; x < settings.xres; x++)
                 {
-                    new_pixels[x + y * xres].R = pixels[x + y * xres].R / s;
-                    new_pixels[x + y * xres].G = pixels[x + y * xres].G / s;
-                    new_pixels[x + y * xres].B = pixels[x + y * xres].B / s;
+                    if (z <= y + 50)
+                    {
+                        new_pixels[x + z * settings.xres].R = pixels[x + z * settings.xres].R / s;
+                        new_pixels[x + z * settings.xres].G = pixels[x + z * settings.xres].G / s;
+                        new_pixels[x + z * settings.xres].B = pixels[x + z * settings.xres].B / s;
+
+                        /*
+                        pixels[x + y * settings.xres].R += powf((double)col.x, 0.45);
+                        pixels[x + y * settings.xres].G += powf((double)col.y, 0.45);
+                        pixels[x + y * settings.xres].B += powf((double)col.z, 0.45);
+                        */
+                    }
                 }
             }
+
             glBindTexture(GL_TEXTURE_2D, image_texture);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, new_pixels);
             glBindTexture(GL_TEXTURE_2D, 0);
-            s++;
+
+            if (y == 0)
+            {
+                start = get_time();
+            }
+
+            if (y < settings.yres - 50)
+            {
+                y += 50;
+                //y = std::min(y, settings.yres);
+            }
+
+            if (y == settings.yres)
+            {
+                s++;
+
+                //std::cout << y << "\n";
+
+                y = 0;
+
+                end = get_time();
+                std::chrono::duration<double> elapsed = end - start;
+                render_avg += elapsed.count();
+            }
+
+            if (y == previous_y) y = settings.yres;
         }
-
-        auto end = get_time();
-        std::chrono::duration<double> elapsed = end - start;
-
-        double render_1spp_time = elapsed.count();
 
         // render view
         {
             ImGui::Begin("RenderView");
+
+            ImVec2 scrolling(0.0f, 0.0f);
 
             if (ImGui::Button("Start"))
             {
@@ -253,7 +417,14 @@ int main(int, char**)
             ImGui::SameLine();
             if (ImGui::Button("Reset"))
             {
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
+                uv0.x = 0.0f;
+                uv0.y = 0.0f;
+                uv1.x = settings.xres / 1000;
+                uv1.y = settings.yres / 1000;
+                scrolling.x = 0.0f;
+                scrolling.y = 0.0f;
+                zoom = 1.0f;
             }
             ImGui::SameLine();
             if (ImGui::Button("Save Image"))
@@ -261,8 +432,43 @@ int main(int, char**)
                 save_window = true;
             }
 
-            ImGui::Image((void*)image_texture, ImVec2(settings.xres, settings.yres));
-            
+            ImVec2 size(1000, 950);
+
+            ImVec2 origin(0.5f, 0.5f);
+
+            const ImVec4 tint(1.0f, 1.0f, 1.0f, 1.0f);
+            const ImVec4 border_color(0.0f, 0.0f, 0.0f, 1.0f);
+
+            ImGui::SetScrollY(0.0f);
+            ImGui::Image((void*)image_texture, size, uv0, uv1, tint, border_color);
+
+            const bool is_hovered = ImGui::IsItemHovered();
+            const bool is_active = ImGui::IsItemActive();
+
+            if (is_hovered && ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+            {
+                scrolling.x += io.MouseDelta.x * 0.001;
+                scrolling.y += io.MouseDelta.y * 0.001;
+            }
+
+            const float mouse_wheel = io.MouseWheel;
+
+            if (is_hovered && mouse_wheel != 0.0f)
+            {
+                uv0.x += (mouse_wheel * (0.05f * (float)settings.yres / 1000.0f));
+                uv0.y += (mouse_wheel * (0.05f * (float)settings.xres / 1000.0f));
+                uv1.x -= (mouse_wheel * (0.05f * (float)settings.yres / 1000.0f));
+                uv1.y -= (mouse_wheel * (0.05f * (float)settings.xres / 1000.0f));
+                zoom -= (mouse_wheel * 0.05f);
+            }
+
+            float z = (zoom > 0.1f) ? zoom : 0.1;
+
+            uv0.x -= (scrolling.x * z);
+            uv1.x -= (scrolling.x * z);
+            uv0.y -= (scrolling.y * z);
+            uv1.y -= (scrolling.y * z);
+
             ImGui::End();
         }
 
@@ -277,12 +483,26 @@ int main(int, char**)
 
             if (ImGui::Button("Save"))
             {
+                color_t* out_pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
+
+                for (int z = 0; z < settings.yres; z++)
+                {
+                    for (int x = 0; x < settings.xres; x++)
+                    {
+                        out_pixels[x + z * settings.xres].R = pixels[x + z * settings.xres].R / s;
+                        out_pixels[x + z * settings.xres].G = pixels[x + z * settings.xres].G / s;
+                        out_pixels[x + z * settings.xres].B = pixels[x + z * settings.xres].B / s;    
+                    }
+                }
+
                 OIIO::ImageSpec spec(settings.xres, settings.yres, 3, OIIO::TypeDesc::FLOAT);
-                OIIO::ImageBuf buffer(spec, new_pixels);
+                OIIO::ImageBuf buffer(spec, out_pixels);
 
                 //buffer = OIIO::ImageBufAlgo::flip(buffer);
 
                 buffer.write(path);
+
+                delete[] out_pixels;
 
                 save_window = false;
             }
@@ -295,7 +515,9 @@ int main(int, char**)
         {
             ImGui::Begin("Infos");
 
-            ImGui::Text("Average per sample time is %f seconds", render_1spp_time);
+            render_1spp_time = render_avg / s;
+
+            ImGui::Text("Average spp is %f seconds", render_1spp_time);
             ImGui::Text("Rendered %i SPP", s);
             
             ImGui::End();
@@ -339,7 +561,7 @@ int main(int, char**)
                 cam.anamorphic_x = anamorphic[0];
                 cam.anamorphic_y = anamorphic[1];
 
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
 
                 change = false;
             }
@@ -387,35 +609,83 @@ int main(int, char**)
 
                 rtcCommitScene(g_scene);
 
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
 
                 change = false;
             }
+
+            ImGui::End();
         }
 
         // material editor window
         {
             ImGui::Begin("Material Editor");
 
-            static int mat_id;
-            static float material_color[3] = { materials[mat_id].clr.x,  materials[mat_id].clr.y,  materials[mat_id].clr.z };
-            static float reflection_color[3] = { materials[mat_id].reflection_color.x,  materials[mat_id].reflection_color.y,  materials[mat_id].reflection_color.z };
+            static std::string mat_name;
+            static float material_color[3];
+            static float reflection_color[3];
+            static float spec_color[3];
             static float refraction_color[3];
-            static float diff_roughness = materials[mat_id].diffuse_roughness;
-            static float metallic = materials[mat_id].metallic;
-            static float roughness = materials[mat_id].roughness;
-            static float specular = materials[mat_id].specular;
-            static float ior = materials[mat_id].ior.x;
+            static float diff_roughness;
+            static float metallic;
+            static float roughness;
+            static float specular;
+            static float reflectance;
+            static float ior;
+            static float refrac;
+            static float rough_refrac;
             static bool change = false;
+            
+            ImGui::Text("%s", mat_name);
 
-            ImGui::InputInt("Material ID", &mat_id);
-            ImGui::InputFloat3("Diffuse Color", material_color);
+            if (ImGui::InputInt("Material ID", &mat_id))
+            {
+                mat_id = std::min(mat_id, (int)materials.size() - 1);
+                mat_id = std::max(0, mat_id);
+
+                mat_name = materials[mat_id].name;
+
+                material_color[0] = materials[mat_id].clr.x;
+                material_color[1] = materials[mat_id].clr.y;
+                material_color[2] = materials[mat_id].clr.z;
+
+                reflection_color[0] = materials[mat_id].reflection_color.x;
+                reflection_color[1] = materials[mat_id].reflection_color.y;
+                reflection_color[2] = materials[mat_id].reflection_color.z;
+
+                refraction_color[0] = materials[mat_id].refraction_color.x;
+                refraction_color[1] = materials[mat_id].refraction_color.y;
+                refraction_color[2] = materials[mat_id].refraction_color.z;
+
+                spec_color[0] = materials[mat_id].specular_color.x;
+                spec_color[1] = materials[mat_id].specular_color.y;
+                spec_color[2] = materials[mat_id].specular_color.z;
+
+                diff_roughness = materials[mat_id].diffuse_roughness;
+                metallic = materials[mat_id].metallic;
+                roughness = materials[mat_id].roughness;
+                specular = materials[mat_id].specular;
+                reflectance = materials[mat_id].reflectance;
+                ior = materials[mat_id].ior.x;
+                refrac = materials[mat_id].refraction;
+                rough_refrac = materials[mat_id].refraction_roughness;
+            }
+           
+
+            
+            //ImGui::InputFloat3("Diffuse Color", material_color);
+            ImGui::ColorEdit3("Diffuse Color", material_color, ImGuiColorEditFlags_NoInputs);
             ImGui::InputFloat("Diffuse Roughness", &diff_roughness);
-            ImGui::InputFloat("Specular", &specular);
-            ImGui::InputFloat("Specular Roughness", &roughness);
+            ImGui::InputFloat("Reflectance", &reflectance);
+            ImGui::ColorEdit3("Reflectance Color", reflection_color, ImGuiColorEditFlags_NoInputs);
             ImGui::InputFloat("Metallic", &metallic);
+            ImGui::InputFloat("Specular", &specular);
+            ImGui::InputFloat("Reflectance/Specular Roughness", &roughness);
+            ImGui::ColorEdit3("Specular Color", spec_color, ImGuiColorEditFlags_NoInputs);
             ImGui::InputFloat("Ior", &ior);
-            ImGui::InputFloat3("Reflection Color", reflection_color);
+            ImGui::InputFloat("Refraction", &refrac);
+            ImGui::InputFloat("Refraction Roughness", &rough_refrac);
+            ImGui::ColorEdit3("Refraction Color", refraction_color, ImGuiColorEditFlags_NoInputs);
             if (ImGui::Button("Submit Changes")) change = true;
 
             if (change)
@@ -427,19 +697,33 @@ int main(int, char**)
                 materials[mat_id].diffuse_roughness = diff_roughness;
 
                 materials[mat_id].specular = specular;
+                materials[mat_id].reflectance = reflectance;
                 materials[mat_id].roughness = roughness;
                 materials[mat_id].metallic = metallic;
                 materials[mat_id].ior = vec3(ior);
+                materials[mat_id].refraction = refrac;
 
                 materials[mat_id].reflection_color.x = reflection_color[0];
                 materials[mat_id].reflection_color.y = reflection_color[1];
                 materials[mat_id].reflection_color.z = reflection_color[2];
 
+                materials[mat_id].specular_color.x = spec_color[0];
+                materials[mat_id].specular_color.y = spec_color[1];
+                materials[mat_id].specular_color.z = spec_color[2];
 
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, s);
+                materials[mat_id].refraction_roughness = rough_refrac;
+
+                materials[mat_id].refraction_color.x = refraction_color[0];
+                materials[mat_id].refraction_color.y = refraction_color[1];
+                materials[mat_id].refraction_color.z = refraction_color[2];
+
+
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
 
                 change = false;
             }
+
+            ImGui::End();
         }
 
         // Rendering

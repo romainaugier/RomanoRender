@@ -15,6 +15,8 @@
 struct Vertex { float x, y, z, r; };
 struct Triangle { int v0, v1, v2; };
 
+static float infinity = std::numeric_limits<float>::infinity();
+
 #include <embree3/rtcore.h>
 
 void errorFunction(void* userPtr, enum RTCError error, const char* str)
@@ -157,11 +159,9 @@ vec3 random_in_unit_disk()
 
 
 
-vec3 reflect(vec3& i, vec3& n, float R)
+vec3 reflect(vec3& i, vec3& n)
 {
-    vec3 random = random_ray_in_hemisphere(n);
     vec3 r = i - 2 * dot(i, n) * n;
-    r = lerp(r, random, R);
     return r.normalize();
 }
 
@@ -200,10 +200,10 @@ vec3 refract(vec3& i, vec3& n, float ior)
         if (in) r = r0 + (1 - r0) * std::pow(1 + dot(i, n), 5);
         else r = r0 + (1 - r0) * std::pow(1 - dot(T, n), 5);
 
-        if (generate_random_float() < r) T = reflect(i, n, 0.0f);
+        if (generate_random_float() < r) T = reflect(i, n);
         else T = T; 
     }
-    else T = reflect(i, n, 0.0f);
+    else T = reflect(i, n);
     
     return T;
 }
@@ -283,32 +283,6 @@ typedef struct
     GLfloat R, G, B;
 } color_t;
 
-/*
-void drawImage(GLuint file,
-    float x,
-    float y,
-    float w,
-    float h,
-    float angle)
-{
-    //glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-    glPushMatrix();
-    glTranslatef(x, y, 0.0);
-    glRotatef(angle, 0.0, 0.0, 1.0);
-
-    glBindTexture(GL_TEXTURE_2D, file);
-    glEnable(GL_TEXTURE_2D);
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0, 0.0); glVertex3f(x, y, 0.0f);
-    glTexCoord2f(0.0, 2.0); glVertex3f(x, y + h, 0.0f);
-    glTexCoord2f(2.0, 2.0); glVertex3f(x + w, y + h, 0.0f);
-    glTexCoord2f(2.0, 0.0); glVertex3f(x + w, y, 0.0f);
-    glEnd();
-
-    glPopMatrix();
-}
-*/
 
 vec3 max(float a, vec3 b)
 {
@@ -331,7 +305,7 @@ vec3 HableToneMap(vec3 color)
 }
 
 
-void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int& s)
+void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int& s, int& y, double time)
 {
     for (int y = 0; y < yres; y++)
     {
@@ -354,6 +328,8 @@ void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int&
     }
 
     s = 1;
+    y = 0;
+    time = 0;
 }
 
 
@@ -362,6 +338,15 @@ auto get_time()
     auto start = std::chrono::system_clock::now();
     return start;
 }
+
+
+vec3 vec_abs(vec3& a)
+{
+    return vec3(abs(a.x), abs(a.y), abs(a.z));
+}
+
+
+
 
 #endif
 
