@@ -5,22 +5,22 @@ My first project using C++, the goal of this is to learn both this language, sof
 
 Features list :
 - Intel embree3 for fast path tracing
-- Square, directional, dome and point lights
+- Square, directional, dome/hdri and point lights
 - Direct and indirect illumination
-- Lambert material
-- Dielectric material
-- Simple reflective material
+- Basic shader with lambertian for the diffuse brdf and GGX/Cook-Torrance for the reflective brdf and the btdf
 - OpenImageIO for output (jpg, exr, png, bmp)
 - Multithreaded rendering
 - Obj format support
-- Batch and (very simple) progressive rendering
+- Simple UI with progressive rendering, camera, material and light editor
 
 Planned :
 - Improved camera model with physically based parameters
-- Image-based lighting
+- Multiple Importance Sampling
 - Uber-shader
 - Adaptive sampling
-- OpenGL view with controls to start, pause, restart render, change render settings, load a different scene, change materials, change light settings
+- Improve the ui
+- Create a better scene parser and scene system
+- Add support for Alembic format
 - Improve overall performance of the renderer
 
 
@@ -56,14 +56,16 @@ Global illumination with point light :
 Buggy Pixar Kitchen render :
 ![Broken_pixar_gi](https://imgur.com/LrhkbOw.png)
 
-Glass :
+Glass (and embree3 implementation) :
 ![Glass](https://imgur.com/qHnt7dH.png)
 
 Few bugs through area light implementation :
+
 ![area_bug1](https://imgur.com/1GqX4Io.png)
 ![area_bug2](https://imgur.com/14AtQtl.png)
 
 Finally working :
+
 ![first_area](https://imgur.com/C7Lpk8W.png)
 
 A more interesting area light render :
