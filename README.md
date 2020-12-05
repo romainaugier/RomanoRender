@@ -1,26 +1,26 @@
 # Romano Render
 
 Monte Carlo PathTracer
-My first project using C++, the goal of this is to learn both this language, a bit of software engineering and more about rendering, maths and computer graphics.
+My first project using C++, the goal of this is to learn both this language, software engineering and more about rendering, maths and computer graphics.
 
 Features list :
 - Intel embree3 for fast path tracing
-- Square, directional, dome and point lights
+- Square, directional, dome/hdri and point lights
 - Direct and indirect illumination
-- Lambert material
-- Dielectric material
-- Simple reflective material
+- Basic shader with lambertian for the diffuse brdf and GGX/Cook-Torrance for the reflective brdf and the btdf
 - OpenImageIO for output (jpg, exr, png, bmp)
 - Multithreaded rendering
 - Obj format support
-- Batch and (very simple) progressive rendering
+- Simple UI with progressive rendering, camera, material and light editor
 
 Planned :
 - Improved camera model with physically based parameters
-- Image-based lighting
+- Multiple Importance Sampling
 - Uber-shader
 - Adaptive sampling
-- OpenGL view with controls to start, pause, restart render, change render settings, load a different scene, change materials, change light settings
+- Improve the ui
+- Create a better scene parser and scene system
+- Add support for Alembic format
 - Improve overall performance of the renderer
 
 
@@ -49,3 +49,53 @@ First buggy test with light :
 
 Finally getting a proper point light working :
 ![Pxr_Kitchen_pt_light](https://i.imgur.com/1NkyIHt.png)
+
+Global illumination with point light :
+![gi_dragon](https://imgur.com/BwdKWjW.png)
+
+Buggy Pixar Kitchen render :
+![Broken_pixar_gi](https://imgur.com/LrhkbOw.png)
+
+Glass (and embree3 implementation) :
+![Glass](https://imgur.com/qHnt7dH.png)
+
+Few bugs through area light implementation :
+
+![area_bug1](https://imgur.com/1GqX4Io.png)
+![area_bug2](https://imgur.com/14AtQtl.png)
+
+Finally working :
+
+![first_area](https://imgur.com/C7Lpk8W.png)
+
+A more interesting area light render :
+![drag_area](https://imgur.com/fJC7Yzh.png)
+
+Render mixing area and directional lights :
+![area_and_dir](https://imgur.com/DAkX5yc.png)
+
+Depth of field and pure reflective material :
+![pure_reflec_dof](https://imgur.com/tvGHbuO.png)
+
+The infamous white dome light aka ambien occlusion :
+![dome_light_ao](https://imgur.com/6WSffH0.png)
+
+GGX and Cook-Torrance brdf :
+![ggx_brdf](https://imgur.com/j3RtwnK.png)
+
+More GGX and Cook-Torrance :
+![mustang_1](https://imgur.com/ptyFUyF.png)
+
+GGX and Cook-Torrance for refraction :
+![ggx_ct_refrac](https://imgur.com/xQalk0q.png)
+
+HDRI naive lighting :
+
+![hdri_1](https://imgur.com/lDZkYxh.png)
+
+Hdri crazyness :
+![hdri_mdr](https://imgur.com/628KbyT.png)
+
+Combining all the cool stuff I implemented lately :
+![gold_eagle](https://imgur.com/GjSkEqd.png)
+
