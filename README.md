@@ -90,6 +90,7 @@ GGX and Cook-Torrance for refraction :
 ![ggx_ct_refrac](https://imgur.com/xQalk0q.png)
 
 HDRI naive lighting :
+
 ![hdri_1](https://imgur.com/lDZkYxh.png)
 
 Hdri crazyness :
