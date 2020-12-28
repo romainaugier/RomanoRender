@@ -1,5 +1,5 @@
 #pragma once
-#include "vec3.h"
+#include "utils/vec3.h"
 #include <OpenImageIO/imagebuf.h>
 
 #ifndef MATERIAL
@@ -33,10 +33,16 @@ public:
         specular = 0.0f;
         reflectance = 0.0f;
         metallic = 0.0f;
+        sss = 0.0f;
+        sss_radius = vec3(1.0f);
+        sss_scale = 1.0f;
+        sss_abs = 0.0f;
+        sss_steps = 15;
         ior = vec3(1.0f);
         reflection_color = vec3(1.0f);
         specular_color = vec3(1.0f);
         refraction_color = vec3(1.0f);
+        sss_color = vec3(1.0f);
     }
 
 
@@ -61,6 +67,13 @@ public:
     float specular;
     vec3 specular_color;
     vec3 ior;
+
+    float sss;
+    vec3 sss_color;
+    vec3 sss_radius;
+    float sss_scale;
+    int sss_steps;
+    float sss_abs;
 };
 
 

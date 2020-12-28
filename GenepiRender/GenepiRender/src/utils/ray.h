@@ -1,5 +1,5 @@
 #pragma once
-#include "vec3.h"
+#include "utils/vec3.h"
 
 #ifndef RAY
 #define RAY

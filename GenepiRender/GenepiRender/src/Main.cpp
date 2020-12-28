@@ -1,5 +1,6 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imnodes.h"
 #include <stdio.h>
 
 #define IMGUI_IMPL_OPENGL_LOADER_GL3W
@@ -50,30 +51,32 @@ static void glfw_error_callback(int error, const char* description)
 #include <algorithm>
 #include <math.h>
 
-#include "objloader.h"
-#include "ray.h"
-#include "triangle.h"
-#include "camera.h"
-#include "matrix.h"
-#include "tiles.h"
-#include "scene.h"
-#include "material.h"
-#include "light.h"
-#include "utils.h"
-#include "render.h"
+#include "scene/objloader.h"
+#include "utils/ray.h"
+#include "scene/camera.h"
+#include "utils/matrix.h"
+#include "scene/scene.h"
+#include "shading/material.h"
+#include "shading/light.h"
+#include "utils/utils.h"
+#include "render/render.h"
+#include "app/log.h"
+#include "scene/settings.h"
+#include "utils/vec2.h"
+#include "render/sampler.h"
 
 
 
 int main(int, char**)
 {
-    int xres = 1280;
-    int yres = 720;
+    int xres = 800;
+    int yres = 800;
     int tile_number = 8;
     int unified_samples = 32;
     int nee_samples = 1;
     int gi_samples = 1;
     int samples[] = { unified_samples, nee_samples, gi_samples };
-    int bounces[] = { 6, 6, 10 };
+    int bounces[] = { 3, 4, 6, 1 };
     float variance_threshold = 0.001;
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
@@ -85,30 +88,40 @@ int main(int, char**)
     render_settings settings(xres, yres, samples, bounces, filename, log, tile_number);
     camera cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
 
+    std::vector<std::vector<vec2>> sequence = load_sequences("D:/GenepiRender/Samples");
+
+    int* pixel_ids = new int[settings.xres * settings.yres];
+    
+#pragma omp parallel for
+    for (int i = 0; i < settings.xres * settings.yres - 1; i++)
+    {
+        pixel_ids[i] = (int)(generate_random_float() * (sequence.size() - 1));
+    }
+
 
     std::vector<light> lights;
 
-    light square(2, true, 350.0f, vec3(1.0f), vec3(-2.5f, 15.0f, -2.5f), 5.0f, 5.0f, vec3(0, -1, 0));
+    light square(2, true, 400.0f, vec3(1.0f), vec3(-15.0f, 40.0f, -15.0f), 30.0f, 30.0f, vec3(0, -1, 0));
     lights.push_back(square);
 
-    light front(2, true, 400.0f, vec3(1.0f), vec3(-10.0f, 5.0f, 40.0f), 20.0f, 10.0f, vec3(0, 0, -1));
-    //lights.push_back(front);
+    light front(2, false, 4000.0f, vec3(1.0f), vec3(30.0f, 5.0f, 10.0f), 20.0f, 10.0f, vec3(-1, 0, 0));
+    lights.push_back(front);
 
-    light back(2, true, 400.0f, vec3(1.0f), vec3(-10.0f, 5.0f, -40.0f), 20.0f, 10.0f, vec3(0, 0, 1));
-    //lights.push_back(back);
+    light back(2, false, 4000.0f, vec3(1.0f), vec3(20.0f, 20.0f, -20.0f), 40.0f, 40.0f, vec3(0, 0, 1));
+    lights.push_back(back);
 
     //light square2(2, true, 350.0f, vec3(1.0f), vec3(30.0f, 7.5f, -5.0f), 10.0f, 10.0f, vec3(-1, 0, 0));
     //lights.push_back(square2);
 
-    light dir(1, 10.0f, vec3(1.0f), vec3(1.0f, -1.0f, -0.6f), 1.0f);
+    light dir(1, 10.0f, vec3(1.0f), vec3(1.0f, -0.6f, -0.4f), 1.0f);
     //lights.push_back(dir);
-    //light dir2(1, 9.0f, vec3(1.0f, 0.6f, 0.2f), vec3(1.0f, -1.0f, -0.6f), 3.0f);
+    light dir2(1, 9.0f, vec3(1.0f, 0.6f, 0.2f), vec3(1.0f, -0.6f, -0.4f), 3.0f);
     //lights.push_back(dir2);
 
-    light dome(3, 1.0f, "D:/Ressources/HDRIs/pond_2k.hdr");
+    light dome(3, 1.0f, "D:/Ressources/HDRIs/pond_2k.hdr", true);
     //lights.push_back(dome);
 
-    light env(3, 1.0f, vec3(1.0f), vec3(0.0f));
+    light env(3, 1.0f, vec3(0.8f, 0.9f, 1.0f), vec3(0.0f));
     //lights.push_back(env);
 
 
@@ -176,32 +189,45 @@ int main(int, char**)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    imnodes::Initialize();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
 
+    // docking
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
     // style
     ImGuiStyle* style = &ImGui::GetStyle();
 
     style->WindowPadding = ImVec2(15, 15);
-    style->WindowRounding = 5.0f;
+    style->WindowRounding = 0.0f;
     style->FramePadding = ImVec2(5, 5);
-    style->FrameRounding = 4.0f;
+    style->FrameRounding = 0.0f;
     style->ItemSpacing = ImVec2(12, 8);
     style->ItemInnerSpacing = ImVec2(8, 6);
     style->IndentSpacing = 25.0f;
     style->ScrollbarSize = 15.0f;
-    style->ScrollbarRounding = 9.0f;
+    style->ScrollbarRounding = 0.0f;
     style->GrabMinSize = 5.0f;
-    style->GrabRounding = 3.0f;
+    style->GrabRounding = 0.0f;
+    style->ChildRounding = 0.0f;
+    style->TabRounding = 0.0f;
+    style->PopupRounding = 0.0f;
+    style->GrabRounding = 0.0f;
+    style->LogSliderDeadzone = 0.0f;
+    style->ScrollbarRounding = 0.0f;
 
+    style->ColorButtonPosition = ImGuiDir_Left;
+
+    // colors
     style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
     style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
     style->Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
     style->Colors[ImGuiCol_ChildBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
     style->Colors[ImGuiCol_PopupBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
-    //style->Colors[ImGuiCol_Border] = ImVec4(0.80f, 0.80f, 0.83f, 0.88f);
+    style->Colors[ImGuiCol_Border] = ImVec4(0.80f, 0.80f, 0.83f, 0.88f);
     style->Colors[ImGuiCol_BorderShadow] = ImVec4(0.92f, 0.91f, 0.88f, 0.00f);
     style->Colors[ImGuiCol_FrameBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
     style->Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
@@ -214,7 +240,6 @@ int main(int, char**)
     style->Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
     style->Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
     style->Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-    //style->Colors[ImGuiCol_ComboBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
     style->Colors[ImGuiCol_CheckMark] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
     style->Colors[ImGuiCol_SliderGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
     style->Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
@@ -224,21 +249,32 @@ int main(int, char**)
     style->Colors[ImGuiCol_Header] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
     style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
     style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-    //style->Colors[ImGuiCol_Column] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
-    //style->Colors[ImGuiCol_ColumnHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
-    //style->Colors[ImGuiCol_ColumnActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
     style->Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     style->Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
     style->Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-    //style->Colors[ImGuiCol_CloseButton] = ImVec4(0.40f, 0.39f, 0.38f, 0.16f);
-    //style->Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.40f, 0.39f, 0.38f, 0.39f);
-    //style->Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.40f, 0.39f, 0.38f, 1.00f);
     style->Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
     style->Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
     style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
     style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
     style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
-    style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
+    style->Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.04f);
+    style->Colors[ImGuiCol_TabHovered] = ImVec4(0.718f, 0.718f, 0.718f, 0.6f);
+    style->Colors[ImGuiCol_TabActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
+    style->Colors[ImGuiCol_DockingPreview] = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
+    style->Colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+
+    // fonts
+    ImFont* font_bold = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-Bold.ttf", 13.0f);
+    ImFont* font_italic = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-Italic.ttf", 13.0f);
+    ImFont* font_extrabolditalic = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-ExtraBoldItalic.ttf", 13.0f);
+    ImFont* font_lightitalic = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-LightItalic.ttf", 13.0f);
+    ImFont* font_bolditalic = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-BoldItalic.ttf", 13.0f);
+    ImFont* font_semibolditalic = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-SemiboldItalic.ttf", 13.0f);
+    ImFont* font_light = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-Light.ttf", 13.0f);
+    ImFont* font_regular = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-Regular.ttf", 13.0f); 
+    ImFont* font_semibold = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-Semibold.ttf", 13.0f);
+    ImFont* font_extrabold = io.Fonts->AddFontFromFileTTF("D:/Fonts/OpenSans-ExtraBold.ttf", 13.0f);
 
 
     // Setup Platform/Renderer bindings
@@ -266,7 +302,7 @@ int main(int, char**)
     bool save_window = false;
 
     ImVec2 uv0(0, 0);
-    ImVec2 uv1((float)yres / 1000.0f, (float)xres / 1000.0f);
+    ImVec2 uv1((float)yres / 500.0f, (float)xres / 1000.0f);
     float zoom = 1.0f;
     
     GLuint image_texture;
@@ -292,8 +328,7 @@ int main(int, char**)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-
-        std::cout << render_stats.rays << "\n";
+        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
         // Render Settings Editor
         {
@@ -311,17 +346,24 @@ int main(int, char**)
                 settings.yres = resolution[1];
 
                 uv0 = ImVec2(0, 0);
-                uv1 = ImVec2((float)settings.yres / 1000.0f, (float)settings.xres / 1000.0f);
+                uv1 = ImVec2((float)settings.yres / 500.0f, (float)settings.xres / 1000.0f);
 
                 cam.aspect = (float)settings.xres / (float)settings.yres;
 
                 delete[] pixels;
                 delete[] new_pixels;
+                delete[] pixel_ids;
+
+                pixel_ids = new int[settings.xres * settings.yres];
+
+#pragma omp parallel for
+                for (int i = 0; i < settings.xres * settings.yres - 1; i++)
+                {
+                    pixel_ids[i] = (int)(generate_random_float() * (sequence.size() - 1));
+                }
 
                 pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
                 new_pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
-
-                std::cout << settings.xres * settings.yres * sizeof(pixels) << "\n";
 
                 glBindTexture(GL_TEXTURE_2D, image_texture);
 
@@ -347,8 +389,9 @@ int main(int, char**)
 
         if (render)
         {
-            progressive_render(s, y, pixels, settings, cam, g_scene, materials, lights, samples, bounces, render_stats);
+            progressive_render(s, pixel_ids, y, sequence, pixels, settings, cam, g_scene, materials, lights, samples, bounces, render_stats);
 
+#pragma omp parallel for
             for (int z = 0; z < settings.yres; z++)
             {
                 for (int x = 0; x < settings.xres; x++)
@@ -409,11 +452,13 @@ int main(int, char**)
             {
                 render = true;
             }
+
             ImGui::SameLine();
             if (ImGui::Button("Stop"))
             {
                 render = false;
             }
+
             ImGui::SameLine();
             if (ImGui::Button("Reset"))
             {
@@ -421,18 +466,20 @@ int main(int, char**)
                 uv0.x = 0.0f;
                 uv0.y = 0.0f;
                 uv1.x = settings.xres / 1000;
-                uv1.y = settings.yres / 1000;
+                uv1.y = settings.yres / 500;
                 scrolling.x = 0.0f;
                 scrolling.y = 0.0f;
                 zoom = 1.0f;
             }
+
             ImGui::SameLine();
+
             if (ImGui::Button("Save Image"))
             {
                 save_window = true;
             }
 
-            ImVec2 size(1000, 950);
+            ImVec2 size(1000, 500);
 
             ImVec2 origin(0.5f, 0.5f);
 
@@ -455,11 +502,11 @@ int main(int, char**)
 
             if (is_hovered && mouse_wheel != 0.0f)
             {
-                uv0.x += (mouse_wheel * (0.05f * (float)settings.yres / 1000.0f));
-                uv0.y += (mouse_wheel * (0.05f * (float)settings.xres / 1000.0f));
-                uv1.x -= (mouse_wheel * (0.05f * (float)settings.yres / 1000.0f));
-                uv1.y -= (mouse_wheel * (0.05f * (float)settings.xres / 1000.0f));
-                zoom -= (mouse_wheel * 0.05f);
+                uv0.x += (mouse_wheel * (0.03f * (float)settings.yres / 500.0f));
+                uv0.y += (mouse_wheel * (0.03f * (float)settings.xres / 1000.0f));
+                uv1.x -= (mouse_wheel * (0.03f * (float)settings.yres / 500.0f));
+                uv1.y -= (mouse_wheel * (0.03f * (float)settings.xres / 1000.0f));
+                zoom -= (mouse_wheel * 0.03f);
             }
 
             float z = (zoom > 0.1f) ? zoom : 0.1;
@@ -477,7 +524,7 @@ int main(int, char**)
         {
             ImGui::Begin("Save Image", &save_window);
 
-            static char path[256] = "D:/image.png";
+            static char path[512] = "D:/image.exr";
 
             ImGui::InputText("File Path", path, IM_ARRAYSIZE(path));
 
@@ -498,8 +545,6 @@ int main(int, char**)
                 OIIO::ImageSpec spec(settings.xres, settings.yres, 3, OIIO::TypeDesc::FLOAT);
                 OIIO::ImageBuf buffer(spec, out_pixels);
 
-                //buffer = OIIO::ImageBufAlgo::flip(buffer);
-
                 buffer.write(path);
 
                 delete[] out_pixels;
@@ -517,7 +562,6 @@ int main(int, char**)
 
             render_1spp_time = render_avg / s;
 
-            ImGui::Text("Average spp is %f seconds", render_1spp_time);
             ImGui::Text("Rendered %i SPP", s);
             
             ImGui::End();
@@ -574,41 +618,18 @@ int main(int, char**)
             ImGui::Begin("Light Editor");
 
             static int light_id;
-            static float light_int = lights[light_id].intensity;
-            static float light_color[3] = { lights[light_id].color.x, lights[light_id].color.y, lights[light_id].color.z };
-            static float light_position[3] = { lights[light_id].position.x, lights[light_id].position.y, lights[light_id].position.z };
-            static float light_orientation[3] = { lights[light_id].orientation.x, lights[light_id].orientation.y, lights[light_id].orientation.z };
-            static float light_size[2] = { lights[light_id].size_x, lights[light_id].size_y };
             static bool change = false;
 
             ImGui::InputInt("Light ID", &light_id);
-            ImGui::InputFloat("Light Intensity", &light_int, 0, 1500);
-            ImGui::InputFloat3("Light Color", light_color);
-            ImGui::InputFloat3("Light Position", light_position);
-            ImGui::InputFloat3("Light Orientation", light_orientation);
-            ImGui::InputFloat2("Light Size", light_size);
+            ImGui::InputFloat("Light Intensity", &lights[light_id].intensity, 0, 10000);
+            ImGui::ColorEdit3("Light Color", &lights[light_id].color.x, ImGuiColorEditFlags_NoInputs);
+            ImGui::InputFloat3("Light Position", &lights[light_id].position.x);
+            ImGui::InputFloat3("Light Orientation", &lights[light_id].orientation.x);
+            ImGui::InputFloat2("Light Size", &lights[light_id].area_size.x);
             if (ImGui::Button("Submit Changes")) change = true;
 
             if (change)
             {
-                lights[light_id].intensity = light_int;
-                lights[light_id].color.x = light_color[0];
-                lights[light_id].color.y = light_color[1];
-                lights[light_id].color.z = light_color[2];
-                lights[light_id].position.x = light_position[0];
-                lights[light_id].position.y = light_position[1];
-                lights[light_id].position.z = light_position[2];
-                lights[light_id].orientation.x = light_orientation[0];
-                lights[light_id].orientation.y = light_orientation[1];
-                lights[light_id].orientation.z = light_orientation[2];
-                lights[light_id].direction.x = light_orientation[0];
-                lights[light_id].direction.y = light_orientation[1];
-                lights[light_id].direction.z = light_orientation[2];
-                lights[light_id].size_x = light_size[0];
-                lights[light_id].size_y = light_size[2];
-
-                rtcCommitScene(g_scene);
-
                 reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
 
                 change = false;
@@ -621,7 +642,7 @@ int main(int, char**)
         {
             ImGui::Begin("Material Editor");
 
-            static std::string mat_name;
+            static const char* mat_name[256];
             static float material_color[3];
             static float reflection_color[3];
             static float spec_color[3];
@@ -636,92 +657,95 @@ int main(int, char**)
             static float rough_refrac;
             static bool change = false;
             
-            ImGui::Text("%s", mat_name);
+            
 
             if (ImGui::InputInt("Material ID", &mat_id))
             {
                 mat_id = std::min(mat_id, (int)materials.size() - 1);
                 mat_id = std::max(0, mat_id);
-
-                mat_name = materials[mat_id].name;
-
-                material_color[0] = materials[mat_id].clr.x;
-                material_color[1] = materials[mat_id].clr.y;
-                material_color[2] = materials[mat_id].clr.z;
-
-                reflection_color[0] = materials[mat_id].reflection_color.x;
-                reflection_color[1] = materials[mat_id].reflection_color.y;
-                reflection_color[2] = materials[mat_id].reflection_color.z;
-
-                refraction_color[0] = materials[mat_id].refraction_color.x;
-                refraction_color[1] = materials[mat_id].refraction_color.y;
-                refraction_color[2] = materials[mat_id].refraction_color.z;
-
-                spec_color[0] = materials[mat_id].specular_color.x;
-                spec_color[1] = materials[mat_id].specular_color.y;
-                spec_color[2] = materials[mat_id].specular_color.z;
-
-                diff_roughness = materials[mat_id].diffuse_roughness;
-                metallic = materials[mat_id].metallic;
-                roughness = materials[mat_id].roughness;
-                specular = materials[mat_id].specular;
-                reflectance = materials[mat_id].reflectance;
-                ior = materials[mat_id].ior.x;
-                refrac = materials[mat_id].refraction;
-                rough_refrac = materials[mat_id].refraction_roughness;
+                //mat_name = materials[mat_id].name.c_str();
             }
-           
 
-            
-            //ImGui::InputFloat3("Diffuse Color", material_color);
-            ImGui::ColorEdit3("Diffuse Color", material_color, ImGuiColorEditFlags_NoInputs);
-            ImGui::InputFloat("Diffuse Roughness", &diff_roughness);
-            ImGui::InputFloat("Reflectance", &reflectance);
-            ImGui::ColorEdit3("Reflectance Color", reflection_color, ImGuiColorEditFlags_NoInputs);
-            ImGui::InputFloat("Metallic", &metallic);
-            ImGui::InputFloat("Specular", &specular);
-            ImGui::InputFloat("Reflectance/Specular Roughness", &roughness);
-            ImGui::ColorEdit3("Specular Color", spec_color, ImGuiColorEditFlags_NoInputs);
-            ImGui::InputFloat("Ior", &ior);
-            ImGui::InputFloat("Refraction", &refrac);
-            ImGui::InputFloat("Refraction Roughness", &rough_refrac);
-            ImGui::ColorEdit3("Refraction Color", refraction_color, ImGuiColorEditFlags_NoInputs);
+            ImGui::Text("%s", materials[mat_id].name.c_str());
+            ImGui::ColorEdit3("Diffuse Color", &materials[mat_id].clr.x, ImGuiColorEditFlags_NoInputs);
+            ImGui::InputFloat("Diffuse Roughness", &materials[mat_id].diffuse_roughness);
+            ImGui::InputFloat("Reflectance", &materials[mat_id].reflectance);
+            ImGui::ColorEdit3("Reflectance Color", &materials[mat_id].reflection_color.x, ImGuiColorEditFlags_NoInputs);
+            ImGui::InputFloat("Metallic", &materials[mat_id].metallic);
+            ImGui::InputFloat("Specular", &materials[mat_id].specular);
+            ImGui::InputFloat("Reflectance/Specular Roughness", &materials[mat_id].roughness);
+            ImGui::ColorEdit3("Specular Color", &materials[mat_id].specular_color.x, ImGuiColorEditFlags_NoInputs);
+            ImGui::InputFloat("Ior", &materials[mat_id].ior.x);
+            ImGui::InputFloat("Refraction", &materials[mat_id].refraction);
+            ImGui::InputFloat("Refraction Roughness", &materials[mat_id].refraction_roughness);
+            ImGui::ColorEdit3("Refraction Color", &materials[mat_id].refraction_color.x, ImGuiColorEditFlags_NoInputs);
+            ImGui::InputFloat("SSS Amount", &materials[mat_id].sss);
+            ImGui::ColorEdit3("SSS Color", &materials[mat_id].sss_color.x);
+            ImGui::InputFloat("SSS Scale", &materials[mat_id].sss_scale);
+            ImGui::ColorEdit3("SSS Radius", &materials[mat_id].sss_radius.x);
+            ImGui::InputFloat("SSS Absorption", &materials[mat_id].sss_abs);
+            ImGui::InputInt("SSS Max Depth", &materials[mat_id].sss_steps);
+
+
             if (ImGui::Button("Submit Changes")) change = true;
 
             if (change)
             {
-                materials[mat_id].clr.x = material_color[0];
-                materials[mat_id].clr.y = material_color[1];
-                materials[mat_id].clr.z = material_color[2];
-
-                materials[mat_id].diffuse_roughness = diff_roughness;
-
-                materials[mat_id].specular = specular;
-                materials[mat_id].reflectance = reflectance;
-                materials[mat_id].roughness = roughness;
-                materials[mat_id].metallic = metallic;
-                materials[mat_id].ior = vec3(ior);
-                materials[mat_id].refraction = refrac;
-
-                materials[mat_id].reflection_color.x = reflection_color[0];
-                materials[mat_id].reflection_color.y = reflection_color[1];
-                materials[mat_id].reflection_color.z = reflection_color[2];
-
-                materials[mat_id].specular_color.x = spec_color[0];
-                materials[mat_id].specular_color.y = spec_color[1];
-                materials[mat_id].specular_color.z = spec_color[2];
-
-                materials[mat_id].refraction_roughness = rough_refrac;
-
-                materials[mat_id].refraction_color.x = refraction_color[0];
-                materials[mat_id].refraction_color.y = refraction_color[1];
-                materials[mat_id].refraction_color.z = refraction_color[2];
-
-
                 reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
 
                 change = false;
             }
+
+            ImGui::End();
+        }
+
+
+        {
+            ImGui::Begin("node editor");
+
+
+            imnodes::BeginNodeEditor();
+
+            {
+                imnodes::BeginNode(0);
+
+                imnodes::BeginNodeTitleBar();
+                ImGui::TextUnformatted("Node");
+                imnodes::EndNodeTitleBar();
+
+                imnodes::BeginInputAttribute(2);
+                ImGui::Text("input");
+                imnodes::EndInputAttribute();
+
+                imnodes::BeginOutputAttribute(3);
+                ImGui::Indent(40);
+                ImGui::Text("output");
+                imnodes::EndOutputAttribute();
+
+                imnodes::EndNode();
+            }
+
+            {
+                imnodes::BeginNode(1);
+
+                imnodes::BeginNodeTitleBar();
+                ImGui::TextUnformatted("Node");
+                imnodes::EndNodeTitleBar();
+
+                imnodes::BeginInputAttribute(4);
+                ImGui::Text("input");
+                imnodes::EndInputAttribute();
+
+                imnodes::BeginOutputAttribute(5);
+                ImGui::Indent(40);
+                ImGui::Text("output");
+                imnodes::EndOutputAttribute();
+
+                imnodes::EndNode();
+            }
+
+
+            imnodes::EndNodeEditor();
 
             ImGui::End();
         }
@@ -743,6 +767,7 @@ int main(int, char**)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    imnodes::Shutdown();
 
     glfwDestroyWindow(window);
     glfwTerminate();

@@ -7,7 +7,7 @@
 class stats
 {
 public:
-	int rays;
+	long long int rays;
 	int samples;
 	int poly_count;
 

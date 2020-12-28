@@ -2,7 +2,7 @@
 #include <vector>
 
 #ifndef TILE
-#define TILe
+#define TILE
 
 
 class tile

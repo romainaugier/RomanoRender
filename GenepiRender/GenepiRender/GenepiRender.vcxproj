@@ -89,7 +89,7 @@
       </PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)GenepiRender\imgui;$(SolutionDir)Dependencies\tracy-0.7.3;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)GenepiRender\imgui;$(SolutionDir)Dependencies\tracy-0.7.3;$(SolutionDir)src</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>
       </UndefinePreprocessorDefinitions>
     </ClCompile>
@@ -123,7 +123,7 @@
       </PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)GenepiRender\imgui;$(SolutionDir)Dependencies\tracy-0.7.3;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)GenepiRender\imgui;$(SolutionDir)Dependencies\tracy-0.7.3;$(SolutionDir)src</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>
       </UndefinePreprocessorDefinitions>
     </ClCompile>
@@ -154,36 +154,41 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="brdf.h" />
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="include_all.h" />
-    <ClInclude Include="light.h" />
-    <ClInclude Include="log.h" />
-    <ClInclude Include="main.h" />
-    <ClInclude Include="mat3.h" />
-    <ClInclude Include="material.h" />
-    <ClInclude Include="math.h" />
-    <ClInclude Include="matrix.h" />
-    <ClInclude Include="render.h" />
-    <ClInclude Include="scene.h" />
-    <ClInclude Include="objloader.h" />
-    <ClInclude Include="ray.h" />
-    <ClInclude Include="settings.h" />
-    <ClInclude Include="stats.h" />
-    <ClInclude Include="tiles.h" />
-    <ClInclude Include="triangle.h" />
-    <ClInclude Include="utils.h" />
-    <ClInclude Include="vec3.h" />
+    <ClInclude Include="src\app\console.h" />
+    <ClInclude Include="src\render\sampler.h" />
+    <ClInclude Include="src\shading\brdf.h" />
+    <ClInclude Include="src\scene\camera.h" />
+    <ClInclude Include="imgui\imnodes.h" />
+    <ClInclude Include="src\include_all.h" />
+    <ClInclude Include="src\shading\light.h" />
+    <ClInclude Include="src\app\log.h" />
+    <ClInclude Include="src\shading\lightpath.h" />
+    <ClInclude Include="src\utils\mat3.h" />
+    <ClInclude Include="src\shading\material.h" />
+    <ClInclude Include="src\utils\math.h" />
+    <ClInclude Include="src\utils\matrix.h" />
+    <ClInclude Include="src\render\render.h" />
+    <ClInclude Include="src\scene\scene.h" />
+    <ClInclude Include="src\scene\objloader.h" />
+    <ClInclude Include="src\utils\ray.h" />
+    <ClInclude Include="src\scene\settings.h" />
+    <ClInclude Include="src\scene\stats.h" />
+    <ClInclude Include="src\utils\tiles.h" />
+    <ClInclude Include="src\utils\utils.h" />
+    <ClInclude Include="src\utils\vec2.h" />
+    <ClInclude Include="src\utils\vec3.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="gl3w.c" />
+    <ClCompile Include="imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\app\gl3w.c" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="imgui\imnodes.cpp" />
+    <ClCompile Include="src\Main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

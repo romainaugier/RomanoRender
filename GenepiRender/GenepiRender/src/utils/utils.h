@@ -3,9 +3,9 @@
 #include <random>
 #include "GLFW/glfw3.h"
 #include "matrix.h"
+#include "vec2.h"
 
 #define _CRT_SECURE_NO_WARNINGS
-
 #define INV_PI = 0.31830988618379067154
 
 #ifndef UTILS
@@ -43,6 +43,12 @@ extern "C" int putchar(int character);
 
 float clamp(float n, float lower, float upper) {
     return std::max(lower, std::min(n, upper));
+}
+
+
+vec3 clamp(vec3& n, float lower, float upper)
+{
+    return vec3(std::max(lower, std::min(n.x, upper)), std::max(lower, std::min(n.y, upper)), std::max(lower, std::min(n.z, upper)));
 }
 
 
@@ -137,6 +143,10 @@ vec3 random_ray_in_hemisphere(vec3& hit_normal)
     double r2 = generate_random_float();
 
     vec3 rand_dir_local(cos(2 * M_PI * r1) * sqrt(1 - r2), sin(2 * M_PI * r1) * sqrt(1 - r2), sqrt(1 - r1));
+
+    vec3 up(0, 1, 0);
+    if (dot(hit_normal, up) > 0.9) up = vec3(1, 0, 0);
+
     vec3 rand(generate_random_float() - 0.5, generate_random_float() - 0.5, generate_random_float() - 0.5);
 
     vec3 tan1 = cross(hit_normal, rand);
@@ -145,6 +155,29 @@ vec3 random_ray_in_hemisphere(vec3& hit_normal)
     vec3 rand_ray_dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
 
     return rand_ray_dir;
+}
+
+
+vec3 sample_ray_in_hemisphere(vec3& hit_normal, vec2& sample)
+{
+    vec2 sp(generate_random_float(), generate_random_float());
+    //vec2 sp = sample;
+    vec3 rand_dir_local(cos(2 * M_PI * sp.x) * sqrt(1 - sp.y), sin(2 * M_PI * sp.x) * sqrt(1 - sp.y), sqrt(1 - sp.x));
+
+    vec3 up(generate_random_float() - 0.5f, generate_random_float() - 0.5f, generate_random_float() - 0.5f);
+
+    vec3 tan1 = cross(hit_normal, up);
+    vec3 tan2 = cross(tan1.normalize(), hit_normal);
+
+    vec3 rand_ray_dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
+
+    return rand_ray_dir;
+}
+
+
+vec3 sample_ray_in_sphere()
+{
+    return vec3(generate_random_float(), generate_random_float(), generate_random_float());
 }
 
 
@@ -346,6 +379,47 @@ vec3 vec_abs(vec3& a)
 }
 
 
+vec3 toPolar(vec2& uv)
+{
+    float theta = 2.0 * M_PI * uv.x + -M_PI / 2.0;
+    float phi = M_PI * uv.y;
+
+    vec3 n;
+
+    n.x = cos(theta) * sin(phi);
+    n.y = sin(theta) * sin(phi);
+    n.z = cos(phi);
+
+    //n = normalize(n);
+    return n;
+}
+
+
+float exponential_distribution(float& sigma)
+{
+    float xi = generate_random_float() - 0.001f;
+    return -logf(1.0f - xi) / sigma;
+}
+
+
+
+#define  Pr  .299
+#define  Pg  .587
+#define  Pb  .114
+
+vec3 changeSaturation(vec3& color, float change) {
+
+    double  P = sqrt(
+        (color.x) * (color.x) * Pr +
+        (color.y) * (color.y) * Pg +
+        (color.z) * (color.z) * Pb);
+
+    color.x = P + ((color.x) - P) * change;
+    color.y = P + ((color.y) - P) * change;
+    color.z = P + ((color.z) - P) * change;
+
+    return color;
+}
 
 
 #endif

@@ -7,12 +7,11 @@
 #include <embree3/rtcore.h>
 
 #include "scene.h"
-#include "triangle.h"
 #include "objloader.h"
-#include "material.h"
-#include "ray.h"
-#include "utils.h"
-#include "light.h"
+#include "shading/material.h"
+#include "utils/ray.h"
+#include "utils/utils.h"
+#include "shading/light.h"
 #include "stats.h"
 
 
@@ -37,6 +36,55 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
         
         for (auto object : loader.LoadedMeshes)
         {   
+            /*
+            RTCGeometry geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_SUBDIVISION);
+
+
+            Vertex* vertices = (Vertex*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(Vertex), object.Vertices.size());
+
+            for (int i = 0; i < object.Vertices.size(); i++)
+            {
+                vertices[i].x = object.Vertices[i].Position.X;
+                vertices[i].y = object.Vertices[i].Position.Y;
+                vertices[i].z = object.Vertices[i].Position.Z;
+            }
+
+            Vertex* normals = new Vertex[object.Vertices.size()];
+
+            for (int i = 0; i < object.Vertices.size(); i++)
+            {
+                normals[i].x = object.Vertices[i].Normal.X;
+                normals[i].y = object.Vertices[i].Normal.Y;
+                normals[i].z = object.Vertices[i].Normal.Z;
+            }
+
+
+            rtcSetGeometryVertexAttributeCount(geo, 1);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT3, normals, 0, sizeof(Vertex), object.Vertices.size());
+
+            
+
+            int* triangles = (int*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, sizeof(int), object.Indices.size());
+
+            for (int i = 0; i < object.Indices.size(); i++)
+            {
+                triangles[i] = object.Indices[i];
+            }
+
+
+            int* faces = (int*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_FACE, 0, RTC_FORMAT_UINT, sizeof(unsigned int), (unsigned int)object.Indices.size() / 3);
+            
+            for (int i = 0; i < object.Indices.size() / 3; i++)
+            {
+                faces[i] = 3;
+            }
+
+            float* level = (float*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_LEVEL, 0, RTC_FORMAT_FLOAT, sizeof(float), object.Indices.size());
+
+            for (unsigned int i = 0; i < object.Indices.size(); i++)
+                level[i] = 8;
+            */
+
             RTCGeometry geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
             Vertex* vertices = (Vertex*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(Vertex), object.Vertices.size());
 
@@ -60,7 +108,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT3, normals, 0, sizeof(Vertex), object.Vertices.size());
 
             Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), object.Indices.size() / 3);
-            
+
             int tri = 0;
 
             for (int i = 0; i < object.Indices.size(); i += 3)
@@ -74,11 +122,12 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
                 tri++;
             }
 
+
             std::random_device rd;
             std::mt19937 mt(rd());
             std::uniform_real_distribution<float> dist(0.25f, 0.75f);
             //vec3 rand_color(dist(mt));
-            vec3 rand_color(0.5f);
+            vec3 rand_color(0.18f);
 
             vec3 mat_color(object.MeshMaterial.Kd.X, object.MeshMaterial.Kd.Y, object.MeshMaterial.Kd.Z);
 
@@ -95,7 +144,7 @@ void load_scene(std::vector<material>& materials, std::vector<light>& lights, RT
             material new_material(id, object.MeshName, mat_color, roughness, refrac);
 
             new_material.islight = false;
-
+            
             materials.push_back(new_material);
 
             rtcCommitGeometry(geo);

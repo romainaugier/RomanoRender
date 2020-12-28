@@ -2,6 +2,7 @@
 #include "vec3.h"
 #include "utils.h"
 
+
 void createBasis(vec3& hit_normal, vec3& tangent, vec3& bitangent)
 {
 	vec3 up(0.0f, 1.0f, 0.0f);
@@ -33,7 +34,10 @@ inline float Log2(float x)
 	const float invLog2 = 1.442695040888963387004650940071;
 	return std::log(x) * invLog2;
 }
+
+
 inline float square(float x) { return x * x; }
+
 
 inline float Saturate(float x)
 {
@@ -46,6 +50,7 @@ inline float Saturate(float x)
 
 	return x;
 }
+
 
 static float inv_pi = 0.31830988618379067154;
 
@@ -77,6 +82,7 @@ inline float CosDPhi(vec3& wa, vec3& wb) { return clamp((wa.x * wb.x + wa.y * wb
 inline vec3 SchlickWeight(vec3& f0, float& h) { return f0 + (1.0f - f0) * std::pow(1 - h, 5); }
 inline float SchlickR0FromRelativeIOR(float eta) { return square(eta - 1.0f) / square(eta + 1.0f); }
 
+
 float FresnelReflectionCoef(float& n2, vec3& normal, vec3& incident)
 {
 	float n1 = 1.0f;
@@ -107,9 +113,62 @@ float RoughnessToAlpha(float roughness) {
 inline float fit01(float x, float a, float b) { return x * (b - a) + a; }
 
 
+inline float fit(float s, float a1, float a2, float b1, float b2)
+{
+	return b1 + ((s - a1) * (b2 - b1)) / (a2 - a1);
+}
+
+
 inline float PowerHeuristic(int nf, float fpdf, int ng, float gpdf)
 {
 	float f = nf * fpdf;
 	float g = ng * gpdf;
 	return (f * f) / (f * f + g * g);
+}
+
+
+inline float ApproxAtan(float z)
+{
+	const float n1 = 0.97239411f;
+	const float n2 = -0.19194795f;
+	return (n1 + n2 * z * z) * z;
+}
+
+
+float ApproxAtan2(float y, float x)
+{
+	const float n1 = 0.97239411f;
+	const float n2 = -0.19194795f;
+	float result = 0.0f;
+	if(x != 0.0f)
+	{
+		const union { float flVal; int nVal; } tYSign = { y };
+		const union { float flVal; int nVal; } tXSign = { x };
+		if (fabsf(x) >= fabsf(y))
+		{
+			union { float flVal; int nVal; } tOffset = { M_PI };
+			tOffset.nVal *= tYSign.nVal & 0x80000000u;
+			tOffset.nVal *= tXSign.nVal >> 31;
+			result = tOffset.flVal;
+			const float z = y / x;
+			result += (n1 + n2 * z * z) * z;
+		}
+		else
+		{
+			union { float flVal; int nVal; } tOffset = { M_PI_2 };
+			tOffset.nVal |= tYSign.nVal & 0x80000000u;
+			result = tOffset.flVal;
+			const float z = x / y;
+			result -= (n1 + n2 * z * z) * z;
+		}
+	}
+	else if (y > 0.0f)
+	{
+		result = M_PI_2;
+	}
+	else if (y < 0.0f)
+	{
+		result = -M_PI_2;
+	}
+	return result;
 }

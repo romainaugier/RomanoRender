@@ -1,8 +1,11 @@
 #pragma once
-#include "vec3.h"
+#include "utils/vec3.h"
 #include "OpenImageIO/imagebuf.h"
-#include "utils.h"
-#include "math.h"
+#include <OpenImageIO/imageio.h>
+#include "utils/utils.h"
+#include "utils/math.h"
+#include "render/sampler.h"
+#include "utils/tiles.h"
 
 #ifndef LIGHT
 #define LIGHT
@@ -33,29 +36,99 @@ public:
 
 	// square lights
 	bool visible;
-	float size_x;
-	float size_y;
+	vec2 area_size;
 	vec3 orientation;
 	vec3 v0, v1, v2, v3;
 	vec3 min, max;
 
-	// ambien light
+	// ambient light
 	OIIO::ImageBuf hdri_map;
 	bool has_map;
 	int xres;
 	int yres;
+	vec3* directions;
+	vec3* colors;
+	float* lums;
+	int size;
 
 
 public:
 	light() {}
 
-	light(int _type, float int_, const char* file) :
+	light(int _type, float int_, const char* file, bool vis) :
 		type(_type),
-		intensity(int_)
+		intensity(int_),
+		visible(vis)
 	{
 		hdri_map = OIIO::ImageBuf(file);
+
 		xres = hdri_map.oriented_full_width();
 		yres = hdri_map.oriented_full_height();
+
+		std::vector<vec3> important_directions;
+		std::vector<vec3> important_colors;
+		std::vector<float> important_lums;
+
+
+		// compute average luminance
+		float avg_lum = 0;
+		float max_lum = 0;
+		float min_lum = 100000.0f;
+
+		for (OIIO::ImageBuf::ConstIterator<float> it(hdri_map); !it.done(); ++it)
+		{
+			float lum = (0.2126 * it[0] + 0.7152 * it[1] + 0.0722 * it[2]);
+			avg_lum += lum / (xres * yres);
+			if (lum > max_lum) max_lum = lum;
+			if (lum < min_lum) min_lum = lum;
+		}
+
+		
+		for (OIIO::ImageBuf::ConstIterator<float> it(hdri_map); !it.done(); ++it)
+		{
+			float lum = (0.2126 * it[0] + 0.7152 * it[1] + 0.0722 * it[2]);
+			
+			if (lum > 1.0f)
+			{
+				vec2 uv(((float)xres - (float)it.x()) / (float)xres, ((float)yres - (float)it.y()) / (float)yres);
+				vec3 dir = toPolar(uv);
+				important_directions.push_back(dir);
+				important_colors.push_back(vec3(it[0], it[1], it[2]));
+				important_lums.push_back(lum);
+			}
+			color += vec3(it[0], it[1], it[2]) / hdri_map.spec().image_pixels();
+		}
+		
+		size = important_directions.size();
+		directions = new vec3[size];
+		colors = new vec3[size];
+		lums = new float[size];
+
+
+		int i = 0;
+
+		for (std::vector<vec3>::iterator it = important_directions.begin(); it != important_directions.end(); ++it)
+		{
+			directions[i] = *it;
+			i++;
+		}
+
+		i = 0;
+
+		for (std::vector<vec3>::iterator it = important_colors.begin(); it != important_colors.end(); ++it)
+		{
+			colors[i] = *it;
+			i++;
+		}
+
+		i = 0;
+
+		for (std::vector<float>::iterator it = important_lums.begin(); it != important_lums.end(); ++it)
+		{
+			lums[i] = *it;
+			i++;
+		}
+
 		has_map = true;
 	}
 
@@ -75,7 +148,8 @@ public:
 		color(col),
 		direction(dir),
 		angle(angle)
-	{}
+	{
+	}
 
 	light(int _type, bool v, float int_, vec3 col, vec3 pos, float sizex, float sizey, vec3 o) :
 		type(_type),
@@ -84,8 +158,7 @@ public:
 		color(col),
 		position(pos),
 		orientation(o),
-		size_x(sizex),
-		size_y(sizey)
+		area_size(sizex, sizey)
 	{
 		v0 = position;
 
@@ -110,6 +183,7 @@ public:
 			if (positions[i].z < min.z) min.z = positions[i].z;
 			if (positions[i].z > max.z) max.z = positions[i].z;
 		}
+
 	}
 
 	vec3 point_light_intensity(float d)
@@ -119,7 +193,7 @@ public:
 };
 
 
-vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sample_position)
+vec3 return_raydir(int& s, int& id, std::vector<vec2>& sampler, light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sample_position)
 {
 	vec3 dir(0.0f);
 
@@ -135,10 +209,10 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 
 		if (dot(up, light.direction) > 0.9f | dot(up, light.direction) < -0.9f) up = vec3(1, 0, 0);
     
-		float random_angle = generate_random_float() * 2.0f * M_PI;
+		float random_angle = sampler[s].x * 2.0f * M_PI;
 		vec3 z = cross(-light.direction, up);
 		vec3 y = cross(-light.direction, z);
-		vec3 rand_pos = z * light.angle * cos(random_angle) + y * light.angle * sin(random_angle) + position;
+		vec3 rand_pos = z * sampler[s].y * light.angle * cos(random_angle) + y * sampler[s].y * light.angle * sin(random_angle) + position;
 
 		dir = rand_pos - hit_pos;
 		dir = dir.normalize();
@@ -149,9 +223,6 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 		float w0 = generate_random_float();
 		float w1 = generate_random_float();
 		float w2 = generate_random_float();
-		//float w3 = generate_random_float();
-
-		vec3 position(0.0f);
 
 		//dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v1, light.v2, w1) + lerp(light.v3, light.v2, w1) + lerp(light.v0, light.v3, w0)) / 4;
 		//dir = vec3(lerp(light.v0, light.v1, w0) + lerp(light.v0, light.v3, w1));
@@ -159,30 +230,21 @@ vec3 return_raydir(light& light, vec3& hit_pos, vec3& hit_normal, vec3& area_sam
 
 		area_sample_position = dir;
 
-
 		dir = dir - hit_pos;
 		dir = dir.normalize();
 	}
 
 	if (light.type == 3)
 	{
-		double r1 = generate_random_float();
-		double r2 = generate_random_float();
-
-		vec3 rand_dir_local(cos(2 * M_PI * r1) * sqrt(1 - r2), sin(2 * M_PI * r1) * sqrt(1 - r2), sqrt(1 - r1));
-		vec3 rand(generate_random_float() - 0.5, generate_random_float() - 0.5, generate_random_float() - 0.5);
-
-		vec3 tan1 = cross(hit_normal, rand);
-		vec3 tan2 = cross(tan1.normalize(), hit_normal);
-
-		dir = rand_dir_local.z * hit_normal + rand_dir_local.x * tan1 + rand_dir_local.y * tan2;
+		id = generate_random_float() * (light.size - 1);
+		dir = light.directions[id];
 	}
 
 	return dir;
 }
 
 
-vec3 return_light_int(light& light, vec3& raydir, float& d)
+vec3 return_light_int(light& light, vec3& raydir, float& d, int& id)
 {
 	if (light.type == 0)
 	{
@@ -196,22 +258,29 @@ vec3 return_light_int(light& light, vec3& raydir, float& d)
 
 	if (light.type == 3)
 	{
-		if (light.has_map)
+		if (light.has_map && id > -1)
+		{
+			return light.color * HableToneMap(light.colors[id])  * clamp(light.lums[id], 0.0f, 1000.0f) * light.intensity;
+		}
+		else if (light.has_map)
 		{
 			vec3 invtan = vec3(0.1591, 0.3183, 0.0);
-			vec3 uv = vec3(atan2(raydir.z, raydir.x), asin(raydir.y), 0.0f);
+			vec3 uv = vec3(ApproxAtan2(raydir.z, raydir.x), asin(raydir.y), 0.0f);
 			uv = uv * invtan;
 			uv += 0.5f;
 
 			int x = light.xres * uv.x;
 			int y = light.yres * uv.y;
 
-			float pixel[3];
-			light.hdri_map.OIIO::ImageBuf::getpixel(light.xres - x, light.yres - y, 0, pixel);
+			float pixels[3];
 
-			vec3 color = vec3(pixel[0], pixel[1], pixel[2]);
+			light.hdri_map.interppixel(light.xres - x, light.yres - y, pixels);
 
-			return color * light.intensity;
+			vec3 color(pixels[0], pixels[1], pixels[2]);
+
+			float luminance = (0.2126 * pixels[0] + 0.7152 * pixels[1] + 0.0722 * pixels[2]);
+
+			return HableToneMap(color) * clamp(luminance, 0.0f, 10.0f) * light.intensity;
 		}
 		else
 		{

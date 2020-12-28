@@ -1,16 +1,17 @@
 #pragma once
 #include "include_all.h"
 
+
 #ifndef RENDER
 #define RENDER
 
 
 // ray cast function used to render. Return a vec3 color
-vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g_scene, std::vector<light>& lights, int depth[], int samples[], stats& stat)
+vec3 cast_ray(int& s, std::vector<vec2>& sampler, const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g_scene, std::vector<light>& lights, int depth[], std::vector<int>& light_path, int samples[], stats& stat)
 {
     stat.add_ray();
 
-    if (depth[0] == 0 || depth[1] == 0 || depth[2] == 0) return vec3(0.0f);
+    if (depth[0] == 0 || depth[1] == 0 || depth[2] == 0 || depth[3] == 0) return vec3(0.0f);
 
     RTCIntersectContext context;
     rtcInitIntersectContext(&context);
@@ -41,7 +42,6 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
     {
         int hit_mat_id = rayhit.hit.geomID;
-
         float hit_albedo = 1.0f;
 
         new_color = mats[hit_mat_id].clr;
@@ -51,10 +51,12 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         float hit_metallic = mats[hit_mat_id].metallic;
         float hit_specular = mats[hit_mat_id].specular;
         float hit_reflectance = mats[hit_mat_id].reflectance;
-        vec3 hit_specular_color = mats[hit_mat_id].specular_color;
+        float hit_sss = mats[hit_mat_id].sss;
 
+        vec3 hit_specular_color = mats[hit_mat_id].specular_color;
         vec3 hit_ior = mats[hit_mat_id].ior;
         vec3 hit_refl_color = mats[hit_mat_id].reflection_color;
+        vec3 hit_sss_color = mats[hit_mat_id].sss_color;
 
         Vertex n;
         rtcInterpolate0(rtcGetGeometry(g_scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, &n.x, 3);
@@ -67,7 +69,6 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
             return mats[hit_mat_id].clr;
         }
         
-
         vec3 hit_pos = vec3(rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z) + rayhit.ray.tfar * vec3(rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z);
 
         vec3 kd(1.0f);
@@ -75,21 +76,19 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         vec3 radiance(0.0f);
         vec3 specular(0.0f);
         vec3 refrac(0.0f);
+        vec3 trans(0.0f);
         vec3 indirect(0.0f);
-
         vec3 ggx(0.0f);
 
-        vec3 tan, bitan;
-        createBasis(hit_normal, tan, bitan);
-
-        vec3 wo, wi, wm;
 
         for (auto light : lights)
         {
             for (int i = 0; i < samples[1]; i++)
             {
                 vec3 area_sample_position(0.0f);
-                vec3 ray_dir = return_raydir(light, hit_pos, hit_normal, area_sample_position);
+                int id = s + i;
+                int hdri_id = 1;
+                vec3 ray_dir = return_raydir(id, hdri_id, sampler, light, hit_pos, hit_normal, area_sample_position);
 
                 ray new_ray(hit_pos, ray_dir);
 
@@ -107,12 +106,9 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
                     area_shadow = -d;
                 }
 
-                float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
+                if (light.type == 3) distance = 2.0f;
 
-                vec3 H = (ray_dir + -r.direction()).normalize();
-                float NdotH = Saturate(dot(hit_normal, H));
-                float LdotH = Saturate(dot(ray_dir, H));
-                float NdotV = Saturate(dot(hit_normal, -r.direction()));
+                float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
 
                 RTCRay shadow;
                 shadow.org_x = new_ray.origin().x;
@@ -126,37 +122,34 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
                 shadow.mask = -1;
                 shadow.flags = 0;
 
-                worldToTangent(hit_normal, tan, bitan, ray_dir, -r.direction(), wo, wi, wm);
-
-                float D = GGXNormalDistribution(NdotH, hit_roughness);
-                float G = SchlickMaskingTerm(NdotL, NdotV, hit_roughness);
-                vec3 F = SchlickFresnel(hit_ior, LdotH);
                 
                 rtcOccluded1(g_scene, &context, &shadow);
 
                 if (shadow.tfar > 0.0f)
                 {
-                    ggx += (D * G * F / (4 * std::max(0.001f, NdotV))) / samples[1];
-                    radiance += (return_light_int(light, ray_dir, distance) * NdotL * area_shadow) / samples[1];
+                    radiance += (return_light_int(light, ray_dir, distance, hdri_id) * NdotL * area_shadow) / samples[1];
+
+                    if (hit_specular > 0.0f)
+                    {
+                        vec3 H = (ray_dir + -r.direction()).normalize();
+                        float NdotH = Saturate(dot(hit_normal, H));
+                        float LdotH = Saturate(dot(ray_dir, H));
+                        float NdotV = Saturate(dot(hit_normal, -r.direction()));
+
+                        float D = GGXNormalDistribution(NdotH, hit_roughness);
+                        float G = SchlickMaskingTerm(NdotL, NdotV, hit_roughness);
+                        vec3 F = SchlickFresnel(hit_ior, LdotH);
+                        ggx += (D * G * F / (4 * std::max(0.001f, NdotV))) / samples[1] * radiance;
+                    }
                 }
             }
         }
+    
+        vec3 mix(1.0f);
+        float f0 = FresnelReflectionCoef(hit_ior.x, hit_normal, r.direction()) * hit_reflectance;
+        kd = (1.0f - clamp(abs(f0), 0.02f, 1.0f)) * (1.0f - hit_metallic) * (1.0f - hit_refraction);
 
-        /*
-        // reflectance
-        if (hit_reflectance > 0.0f)
-        {
-            vec3 H = GGXMicrofacet(hit_normal, hit_roughness).normalize();
-
-            vec3 new_ray_dir = reflect(r.direction(), H);
-
-            ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
-
-            int new_depth[] = { depth[0], depth[1] - 1, depth[2] };
-
-            specular += cast_ray(new_ray, color, mats, g_scene, lights, new_depth, samples, stat) * mats[hit_mat_id].reflection_color;
-        }
-        */
+        
         // refraction
         if (hit_refraction > 0.0f)
         {
@@ -165,65 +158,187 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
             if (dot(r.direction(), hit_normal) > 0) offset = 0.001f;
             if (dot(r.direction(), hit_normal) < 0) offset = -0.001f;
 
-            vec3 H = GGXMicrofacet(hit_normal, mats[hit_mat_id].refraction_roughness).normalize();
+            vec3 H = GGXMicrofacet(hit_normal, mats[hit_mat_id].refraction_roughness);
 
-            vec3 new_ray_dir = refract(r.direction(), H, hit_ior.x);
+            vec3 new_ray_dir = refract(r.direction(), H.normalize(), hit_ior.x);
 
             ray new_ray(hit_pos + hit_normal * offset, new_ray_dir);
 
-            int new_depth[] = { depth[0], depth[1], depth[2] - 1 };
+            int new_depth[] = { depth[0], depth[1], depth[2] - 1, depth[3] };
 
-            refrac += cast_ray(new_ray, color, mats, g_scene, lights, new_depth, samples, stat) * mats[hit_mat_id].refraction_color;
+            light_path.push_back(3);
+
+            refrac += cast_ray(s, sampler, new_ray, color, mats, g_scene, lights, new_depth, light_path, samples, stat) * mats[hit_mat_id].refraction_color;
         }
 
-        float f0 = FresnelReflectionCoef(hit_ior.x, hit_normal, r.direction()) * hit_reflectance;
-
-        kd = (1.0f - f0) * (1.0f - hit_metallic) * (1.0f - hit_refraction);        
-        
-        //(1.0f - clamp(abs(f0), 0.0f, 1.0f)) * 
-
-        /*
-        // indirect lighting
-        if (hit_metallic < 1.0f || hit_refraction < 1.0f)
+        if (hit_sss > 0.0f)
         {
-            for (int i = 0; i < samples[2]; i++)
-            {
-                vec3 rand_ray_dir = random_ray_in_hemisphere(hit_normal);
-                ray random_ray(hit_pos + hit_normal * 0.001f, rand_ray_dir);
+            int new_depth[] = { depth[0], depth[1], depth[2], depth[3] - 1 };
 
-                color += cast_ray(random_ray, color, mats, g_scene, lights, new_depth, samples, stat) * std::max(0.f, dot(hit_normal, rand_ray_dir)) * new_color * kd;
+            vec3 radius = mats[hit_mat_id].sss_radius;
+            float scale = mats[hit_mat_id].sss_scale;
+            float absorption = 1 - mats[hit_mat_id].sss_abs;
+            int steps = mats[hit_mat_id].sss_steps;
+            bool transmitted = false;
+            float step = 0.0f;
+
+            vec3 position = hit_pos + hit_normal * -0.001f;
+            vec3 direction = sample_ray_in_hemisphere(-hit_normal, sampler[s]);
+
+            float step_size = scale;
+
+            vec3 start_position = position;
+            vec3 end_position(0.0f);
+            vec3 end_normal(0.0f);
+
+            for (int i = 1; i < steps + 1; i++)
+            {
+                //if (generate_random_float() > 0.3f) break;
+
+                RTCRayHit shadow;
+                shadow.ray.org_x = position.x;
+                shadow.ray.org_y = position.y;
+                shadow.ray.org_z = position.z;
+                shadow.ray.dir_x = direction.x;
+                shadow.ray.dir_y = direction.y;
+                shadow.ray.dir_z = direction.z;
+                shadow.ray.tnear = 0.0f;
+                shadow.ray.tfar = step_size;
+                shadow.ray.mask = -1;
+                shadow.ray.flags = 0;
+                shadow.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+                shadow.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+
+                rtcIntersect1(g_scene, &context, &shadow);
+
+                if (shadow.hit.geomID != RTC_INVALID_GEOMETRY_ID)
+                {
+                    transmitted = true;
+                    step = shadow.ray.tfar;
+                    end_position = position + direction * step;
+                    end_normal = vec3(shadow.hit.Ng_x, shadow.hit.Ng_y, shadow.hit.Ng_z);
+
+                    break;
+                }
+
+                //step_size = (bleed * (powf(generate_random_float(), -1.0f / bleed) - 1.0f) / std::max(0.001f, scale)) / (float)i;
+                step_size = (generate_random_float() * 2) * scale / i;
+
+                position += direction * step_size;
+
+                direction = sample_ray_in_hemisphere(direction, sampler[s]);
+            }
+           
+            float walked_distance = dist(start_position, end_position);
+            float t = 1 - exp(-walked_distance);
+
+            if (transmitted)
+            {
+                vec3 sss_light_contribution(0.0f);
+
+                //float a = 1.0f / powf((1.0f + scale * walked_distance / bleed), bleed);
+                
+                for (auto light : lights)
+                {
+                    for (int i = 0; i < samples[1]; i++)
+                    {
+                        vec3 area_sample_position(0.0f);
+                        int id = s + i;
+                        int hdri_id = 1;
+                        vec3 ray_dir = return_raydir(id, hdri_id, sampler, light, end_position, end_normal, area_sample_position);
+
+                        ray new_ray(end_position, ray_dir);
+
+                        float distance = 10000.0f;
+                        float area_shadow = 1.0f;
+
+                        if (light.type == 0) distance = dist(end_position, light.position) - 0.001f;
+
+                        if (light.type == 2)
+                        {
+                            if (dot(ray_dir, light.orientation) > 0) continue;
+                            vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
+                            distance = dist(end_position, area_sample_position) - 0.001f;
+                            float d = dot(light.orientation, ray_dir);
+                            area_shadow = -d;
+                        }
+
+                        if (light.type == 3) distance = 2.0f;
+
+                        RTCRay shadow;
+                        shadow.org_x = new_ray.origin().x;
+                        shadow.org_y = new_ray.origin().y;
+                        shadow.org_z = new_ray.origin().z;
+                        shadow.dir_x = new_ray.direction().x;
+                        shadow.dir_y = new_ray.direction().y;
+                        shadow.dir_z = new_ray.direction().z;
+                        shadow.tnear = 0.0f;
+                        shadow.tfar = distance;
+                        shadow.mask = -1;
+                        shadow.flags = 0;
+
+                        rtcOccluded1(g_scene, &context, &shadow);
+
+                        if (shadow.tfar > 0.0f)
+                        {
+                            sss_light_contribution += return_light_int(light, ray_dir, distance, hdri_id) * inv_pi;
+                        }
+                    }
+                }
+
+                //trans += changeSaturation(hit_sss_color, clamp(t, desat, 1.0f)) * a * sss_light_contribution;
+
+
+                vec3 transmitted_color = vec3(hit_sss_color.x * fit(t * absorption, 0.0f, radius.x, 1.0f, 0.0f),
+                                              hit_sss_color.y * fit(t * absorption, 0.0f, radius.y, 1.0f, 0.0f),
+                                              hit_sss_color.z * fit(t * absorption, 0.0f, radius.z, 1.0f, 0.0f));
+
+                trans += sss_light_contribution * transmitted_color;
+            }
+
+            else
+            {
+                trans = vec3(hit_sss_color.x * fit(t * absorption, 0.0f, radius.x, 1.0f, 0.0f),
+                    hit_sss_color.y * fit(t * absorption, 0.0f, radius.y, 1.0f, 0.0f),
+                    hit_sss_color.z * fit(t * absorption, 0.0f, radius.z, 1.0f, 0.0f)) * (1 - t);
             }
         }
-        */
-
-        float random = generate_random_float();
-        vec3 mix(0.0f);
-        float mix_reflectance = fit01(hit_reflectance, 0.0f, 0.5f);
-
-        vec3 new_ray_dir(0.0f);
-        int new_depth[] = { depth[0], depth[1], depth[2] };
-
-        if (random > mix_reflectance)
+        
+        // diffuse / reflection
+        if(hit_refraction == 0.0f)
         {
-            new_ray_dir = random_ray_in_hemisphere(hit_normal);
-            new_depth[0] -= 1;
-            mix = new_color * kd;
+            float random = generate_random_float();
+            float mix_reflectance = fit01(hit_reflectance, 0.0f, 0.5f);
+
+            vec3 new_ray_dir(0.0f);
+            int new_depth[] = { depth[0], depth[1], depth[2] };
+
+            if (random > mix_reflectance)
+            {
+                int id = (int)fit01(random, 0, 10000);
+                new_ray_dir = sample_ray_in_hemisphere(hit_normal, sampler[s]);
+                light_path.push_back(1);
+                new_depth[0] -= 1;
+                mix = new_color * kd;
+            }
+            else
+            {
+                vec3 H = GGXMicrofacet(hit_normal, hit_roughness);
+                new_ray_dir = reflect(r.direction(), H.normalize());
+                light_path.push_back(2);
+                new_depth[1] -= 1;
+                mix = (hit_reflectance * clamp(f0, 0.04f, 1.0f) + hit_metallic) * mats[hit_mat_id].reflection_color;
+            }
+
+            ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
+
+            indirect += cast_ray(s, sampler, new_ray, color, mats, g_scene, lights, new_depth, light_path, samples, stat);
         }
-        else
-        {
-            vec3 H = GGXMicrofacet(hit_normal, hit_roughness).normalize();
-            new_ray_dir = reflect(r.direction(), H);
-            new_depth[1] -= 1;
-            mix = mats[hit_mat_id].reflection_color * clamp(hit_reflectance * f0 + hit_metallic, 0.02f, 1.0f);
-        }
-
-        ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
-
-        indirect += cast_ray(new_ray, color, mats, g_scene, lights, new_depth, samples, stat);
-
-        color += kd * (new_color * inv_pi * radiance) + (refrac * hit_refraction) + ggx * hit_specular_color * hit_specular + indirect * mix;
+        
+        color += kd * (new_color * inv_pi * radiance) + (refrac * hit_refraction) + ggx * hit_specular_color * hit_specular + indirect * mix + trans * hit_sss;
     }
 
+    
     // background for dome lights
     else
     {
@@ -231,17 +346,22 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
         {
             if (light.type == 3)
             {
+                int id = 0;
+                if (depth[0] >= 3 || depth[0] >= 3 && depth[1] < 6 || depth[0] >= 3 && depth[2] < 10) id = -1;
+                if (light_path.size() > 1 && light_path[0] == 1 && light_path[1] == 3) id = -1;
+
                 float d = 0.0f;
-                color = return_light_int(light, r.direction(), d);
+                color = return_light_int(light, r.direction(), d, id);
             }
         }
     }
+    
 
     // nan filtering
     if (std::isnan(color.x) || std::isnan(color.y) || std::isnan(color.z))
     {
-        std::cout << color << "\n";
-        //color = vec3(0.5f);
+        //std::cout << color << "\n";
+        color = vec3(0.5f);
     }
 
     // clamping
@@ -254,142 +374,8 @@ vec3 cast_ray(const ray& r, vec3 color, std::vector<material>& mats, RTCScene& g
 }
 
 
-// function used to render a single tile
-void batch_render_tile(tile* cur_tile, render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, stats& stat)
-{   
-    float scale = tan(deg2rad(cam.fov * 0.5));
-    float aspect = (float)settings.xres / (float)settings.yres;
-
-    vec3 up(0, 1, 0);
-
-    vec3 zAxis = ((cam.pos - cam.lookat).normalize());
-    vec3 xAxis = (cross(up, zAxis).normalize());
-    vec3 yAxis = cross(zAxis, xAxis);
-
-    Matrix44<float> cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, cam.pos.x, cam.pos.y, cam.pos.z, 1.0f);
-
-    Vec3f rayOriginWorld, rayPWorld;
-    Vec3f campos2(0.0, 0.0, 0.0);
-
-    float pixel[3];
-
-    auto start_tile = std::chrono::system_clock::now();
-
-    for (int y = cur_tile->ystart; y < cur_tile->yend; y++)
-    {
-        for (int x = cur_tile->xstart; x < cur_tile->xend; x++)
-        {
-            vec3 col(0.f);
-
-            for (int s = 0; s < settings.samples[0]; s++)
-            {
-                //AA Box-Muller
-                int aa_samples = 1;
-                float r1 = generate_random_float();
-                float r2 = generate_random_float();
-                float dx = sqrt(-0.5 * log(r1)) * cos(2 * M_PI * r2);
-                float dy = sqrt(-0.5 * log(r1)) * sin(2 * M_PI * r2);
-
-                float x_ = (2 * (x + 0.5 + dx) / (float)settings.xres - 1) * cam.aspect * scale;
-                float y_ = (1 - 2 * (y + 0.5 + dy) / (float)settings.yres) * scale;
-
-                cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
-                cameraToWorld.multVecMatrix(Vec3f(x_, y_, -1), rayPWorld);
-                Vec3f rayDir = rayPWorld - rayOriginWorld;
-                rayDir.normalize();
-
-                vec3 dir(rayDir.x, rayDir.y, rayDir.z);
-                ray ray(cam.pos, dir);
-
-                col += (cast_ray(ray, col, mats, g_scene, lights, settings.bounces, settings.samples, stat)) / settings.samples[0];
-            }
-
-            col = HableToneMap(col);
-
-            pixel[0] = pow(col.x, 1.0 / 2.2);
-            pixel[1] = pow(col.y, 1.0 / 2.2);
-            pixel[2] = pow(col.z, 1.0 / 2.2);
-
-            set_tile_pixel(*cur_tile, pixel[0], pixel[1], pixel[2]);
-        }
-    }
-
-    auto end_tile = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_tile = end_tile - start_tile;
-    std::string message = "Tile n°" + std::to_string(cur_tile->id) + " rendered in " + std::to_string(elapsed_tile.count()) + " seconds !";
-    if (settings.printer.level == 3) settings.printer.print(message);
-}
-
-
-// function to batch render
-void batch_render(render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, stats& stat)
-{
-    std::vector<std::future<void>> futures;
-
-
-    OIIO::ImageSpec spec(settings.xres, settings.yres, 3, OIIO::TypeDesc::FLOAT);
-    OIIO::ImageBuf buffer(spec);
-    OIIO::ROI roi(0, settings.xres, 0, settings.yres, 0, 3);
-
-
-    std::vector<tile> tiles = generate_tiles(settings.tile_number, settings.xres, settings.yres, 3);
-
-
-    std::cout << "Starting batch render..." << std::endl;
-    std::cout << "=================================" << std::endl;
-    auto start = std::chrono::system_clock::now();
-    float progress = 100.0 / (settings.tile_number * settings.tile_number);
-
-
-    for (auto& tile : tiles)
-    {
-        futures.push_back(std::async(std::launch::async, batch_render_tile, &tile, settings, cam, g_scene, mats, lights, stat));
-    }
-
-
-    for (int i = 0; i < futures.size(); i++)
-    {
-        futures[i].wait();
-        float p = progress * (i + 1);
-        std::cout << "progress : " << std::floor(p) << "%                                        " << "\r";
-    }
-
-
-    std::cout << "\n";
-
-
-    for (auto& tile : tiles)
-    {
-        float pixels[3];
-        int index = 0;
-        for (int j = tile.ystart; j < tile.yend; j++)
-        {
-            for (int i = tile.xstart; i < tile.xend; i++)
-            {
-                pixels[0] = tile.data[index];
-                pixels[1] = tile.data[index + 1];
-                pixels[2] = tile.data[index + 2];
-
-                buffer.setpixel(i, j, 0, pixels);
-
-                index += 3;
-            }
-        }
-    }
-
-
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "=================================" << std::endl;
-    std::cout << "Render time : " << elapsed.count() << " seconds" << std::endl;
-
-    buffer.write(settings.output_path);
-    std::cout << "=================================" << std::endl;
-    std::cout << settings.output_path << "\n";
-}
-
-
 // another function to batch render
+/*
 void batch_render_omp(render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, stats& stat)
 {
     std::cout << "Starting batch render..." << std::endl;
@@ -452,7 +438,7 @@ void batch_render_omp(render_settings& settings, camera& cam, RTCScene g_scene, 
 
                 ray ray(new_pos, (dir - new_pos).normalize());
 
-                col += (cast_ray(ray, col, mats, g_scene, lights, settings.bounces, settings.samples, stat)) / settings.samples[0];
+                //col += (cast_ray(ray, col, mats, g_scene, lights, settings.bounces, settings.samples, stat)) / settings.samples[0];
             }
             //col = HableToneMap(col);
 
@@ -489,10 +475,10 @@ void batch_render_omp(render_settings& settings, camera& cam, RTCScene g_scene, 
     std::cout << settings.output_path << "\n";
     std::cout << "=================================" << std::endl;
 }
-
+*/
 
 // funtion used to render a single pixel, used for progressive rendering
-void render_p(int s, color_t* pixels, int x, int y, render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, int samples[], int bounces[], stats& stat)
+void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, int samples[], int bounces[], stats& stat)
 {
     float scale = tan(deg2rad(cam.fov * 0.5));
 
@@ -512,16 +498,14 @@ void render_p(int s, color_t* pixels, int x, int y, render_settings& settings, c
     vec3 col(0.f);
 
     //AA Box-Muller
-    int aa_samples = 1;
-    float r1 = generate_random_float();
-    float r2 = generate_random_float();
-    float dx = sqrt(-0.5 * log(r1)) * cos(2 * M_PI * r2);
-    float dy = sqrt(-0.5 * log(r1)) * sin(2 * M_PI * r2);
+    vec2 d = sampler[s];
+    float dx = sqrt(-0.5 * log(d.x)) * cos(2 * M_PI * d.y);
+    float dy = sqrt(-0.5 * log(d.x)) * sin(2 * M_PI * d.y);
 
     vec3 rand = (cam.aperture / 2) * (random_in_unit_disk() * vec3(cam.anamorphic_x, cam.anamorphic_y, 1.0f));
 
-    float x_ = (2 * (x + 0.5 + dx) / (float)settings.xres - 1) * cam.aspect * scale;
-    float y_ = (1 - 2 * (y + 0.5 + dy) / (float)settings.yres) * scale;
+    float x_ = (2 * (x + dx) / (float)settings.xres - 1) * cam.aspect * scale;
+    float y_ = (1 - 2 * (y + dy) / (float)settings.yres) * scale;
 
     cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
     cameraToWorld.multVecMatrix(Vec3f(x_, y_, -1), rayPWorld);
@@ -533,7 +517,9 @@ void render_p(int s, color_t* pixels, int x, int y, render_settings& settings, c
 
     ray ray(new_pos, (dir - new_pos).normalize());
 
-    col = cast_ray(ray, col, mats, g_scene, lights, bounces, samples, stat);
+    std::vector<int> light_path;
+
+    col = cast_ray(s, sampler, ray, col, mats, g_scene, lights, bounces, light_path, samples, stat);
 
     //col = HableToneMap(col);
 
@@ -552,7 +538,7 @@ void render_p(int s, color_t* pixels, int x, int y, render_settings& settings, c
 
 
 // function used to render progressively to the screen
-void progressive_render(int s, int y, color_t* pixels, render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, int samples[], int bounces[], stats& stat)
+void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t* pixels, render_settings& settings, camera& cam, RTCScene g_scene, std::vector<material>& mats, std::vector<light>& lights, int samples[], int bounces[], stats& stat)
 {
     auto start = std::chrono::system_clock::now();
 
@@ -563,7 +549,8 @@ void progressive_render(int s, int y, color_t* pixels, render_settings& settings
     {
         for (int x = 0; x < settings.xres; x++)
         {
-            render_p(s, pixels, x, z, settings, cam, g_scene, mats, lights, samples, bounces, stat);
+            int id = ids[x + z * settings.xres];
+            render_p(s, sampler[id], pixels, x, z, settings, cam, g_scene, mats, lights, samples, bounces, stat);
         }
     }
     auto end = std::chrono::system_clock::now();

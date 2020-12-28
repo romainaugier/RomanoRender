@@ -1,7 +1,7 @@
 #pragma once
-#include "ray.h"
-#include "vec3.h"
-#include "utils.h"
+#include "utils/ray.h"
+#include "utils/vec3.h"
+#include "utils/utils.h"
 
 
 #ifndef CAMERA

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math.h"
+#include "utils/math.h"
 
 
 float oren_nayar(float sigma, float R, vec3& wo, vec3& wi)
@@ -72,9 +72,9 @@ vec3 GGXMicrofacet(vec3& hit_normal, float& roughness)
 	float r1 = generate_random_float();
 
 	vec3 up(0.0f, 1.0f, 0.0f);
-	if (dot(up, hit_normal) > 0.9f) up = vec3(0.0f, 0.0f, 1.0f);
+	if (dot(up, hit_normal) > 0.9f) up = vec3(1.0f, 0.0f, 0.0f);
 
-	vec3 b = cross(hit_normal, up).normalize();
+	vec3 b = cross(hit_normal, up);
 	vec3 t = cross(b, hit_normal);
 	
 	float a2 = roughness * roughness;
