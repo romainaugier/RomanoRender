@@ -8,10 +8,11 @@ Features list :
 - Square, directional, dome/hdri and point lights
 - Direct and indirect illumination
 - Basic shader with lambertian for the diffuse brdf and GGX/Cook-Torrance for the reflective brdf and the btdf
+- Random Walk Subsurface Scattering
 - OpenImageIO for output (jpg, exr, png, bmp)
 - Multithreaded rendering
 - Obj format support
-- Simple UI with progressive rendering, camera, material and light editor
+- In progress UI with node based rendering and progressive renderview
 
 Planned :
 - Improved camera model with physically based parameters
