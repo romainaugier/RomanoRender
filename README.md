@@ -1,6 +1,7 @@
 # Romano Render
 
 Monte Carlo PathTracer
+
 My first project using C++, the goal of this is to learn both this language, software engineering and more about rendering, maths and computer graphics.
 
 Features list :
@@ -99,6 +100,7 @@ Hdri crazyness :
 
 Combining all the cool stuff I implemented lately :
 ![gold_eagle](https://imgur.com/GjSkEqd.png)
+![pxr_kitchen_lourd](https://cdn.discordapp.com/attachments/776720237218889738/791246572192923648/kitchen.jpg)
 
 Random Walk SSS :
 ![rwsss_1](https://cdn.discordapp.com/attachments/776720237218889738/793155438119616553/sss_test5.jpg)
