@@ -5,7 +5,7 @@ My first project using C++, the goal of this is to learn both this language, sof
 
 Features list :
 - Intel embree3 for fast path tracing
-- Square, directional, dome/hdri and point lights
+- Square, distant, dome/hdri and point lights
 - Direct and indirect illumination
 - Basic shader with lambertian for the diffuse brdf and GGX/Cook-Torrance for the reflective brdf and the btdf
 - Random Walk Subsurface Scattering
@@ -100,3 +100,8 @@ Hdri crazyness :
 Combining all the cool stuff I implemented lately :
 ![gold_eagle](https://imgur.com/GjSkEqd.png)
 
+Random Walk SSS :
+![rwsss_1](https://cdn.discordapp.com/attachments/776720237218889738/793155438119616553/sss_test5.jpg)
+
+Some more Random Walk SSS:
+![rwsss_2](https://cdn.discordapp.com/attachments/776720237218889738/792855883797364736/sss_test3.jpg)
