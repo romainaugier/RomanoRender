@@ -1,5 +1,5 @@
 #pragma once
-#include <math.h>
+#include <cmath>
 #include <xmmintrin.h>
 
 #define M_PI 3.14159265358979323846f
@@ -25,7 +25,7 @@ struct alignas(16) float3
 	__forceinline float y() { return _mm_cvtss_f32(_mm_shuffle_ps(m, m, _MM_SHUFFLE(1, 1, 1, 1))); }
 	__forceinline float z() { return _mm_cvtss_f32(_mm_shuffle_ps(m, m, _MM_SHUFFLE(2, 2, 2, 2))); }
 
-	__forceinline float3 yzx() const 
+	__forceinline float3 yzx() const {}
 
 	__forceinline void setX(float x) { m = _mm_move_ss(m, _mm_set_ss(x)); }
 	__forceinline void setY(float y) 
@@ -46,3 +46,21 @@ struct alignas(16) float3
 
 
 };
+
+
+
+
+
+// Fast maths functions
+
+
+// Fast reciprocal square root approximation for x > 0.25
+__forceinline float FastInvSqrt(float x)
+{
+	int tmp = ((0x3f800000 << 1) + 0X3f800000 - *(long*)&x) >> 1;
+	auto y = *(float*)&tmp;
+	return y * (1.47f - 0.47f * x * y * y);
+}
+
+
+__forceinline float FMA(float x, float y, float z) { return std::fmaf(x, y, z); }
