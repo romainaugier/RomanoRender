@@ -25,6 +25,8 @@ Planned :
 - Add support for Alembic format
 - Improve overall performance of the renderer
 
+Current progress : https://streamable.com/9qmr4u
+
 
 Journey:
 
