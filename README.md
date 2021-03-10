@@ -1,5 +1,9 @@
 # Romano Render
 
+###
+I'm currently working on the CMake setup to get the renderer working more easily if you want to fork the repository
+###
+
 Monte Carlo PathTracer
 
 My first project using C++, the goal of this is to learn both this language, software engineering and more about rendering, maths and computer graphics.
