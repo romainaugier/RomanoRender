@@ -5,19 +5,15 @@
 #include <future>
 #include <random>
 
-#include <embree3/rtcore.h>
+#include "utils/embree_utils.h"
+#include "utils/file_utils.h"
+#include "shading/material.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_TRIANGULATE
 #include "tinyobjl.h"
 
 #include "objloader.h"
-#include "shading/material.h"
-#include "utils/ray.h"
-#include "utils/utils.h"
-#include "shading/light.h"
-#include "stats.h"
-#include "app/console.h"
 
 
 #ifndef SCENE

@@ -7,7 +7,7 @@ vec3 Point_Light::return_light_throughput(const float& d) const
 	return intensity * color / (d * d);
 }
 
-vec3 Point_Light::return_ray_direction(const vec3& hit_position, const vec2& sample = vec2(0.0f)) const
+vec3 Point_Light::return_ray_direction(const vec3& hit_position, const vec2& sample) const
 {
 	const vec3 dir = position - hit_position;
 	return dir.normalize();
@@ -15,7 +15,7 @@ vec3 Point_Light::return_ray_direction(const vec3& hit_position, const vec2& sam
 
 
 // distant light functions
-vec3 Distant_Light::return_light_throughput(const float& d = 0.0f) const
+vec3 Distant_Light::return_light_throughput(const float& d) const
 {
 	return intensity * color;
 }
@@ -53,7 +53,7 @@ vec3 Square_Light::return_ray_direction(const vec3& hit_position, const vec2& sa
 
 
 // dome light functions
-vec3 Dome_Light::return_light_throughput(const float& d = 0.0f) const
+vec3 Dome_Light::return_light_throughput(const float& d) const
 {
 	return intensity * color;
 }

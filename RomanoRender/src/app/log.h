@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <iostream>
 
 #ifndef LOG
 #define LOG
@@ -54,20 +56,11 @@ public:
 		}
 	}
 
-	void print(const char* message)
-	{
-		std::cout << level_index << " " << message << std::endl;
-	}
+	void print(const char* message) const;
 
-	void print(std::string message)
-	{
-		std::cout << level_index << " " << message << std::endl;
-	}
+	void print(std::string message) const;
 
-	void set_level(int lvl)
-	{
-		level = lvl;
-	}
+	void set_level(int lvl);
 };
 
 #endif

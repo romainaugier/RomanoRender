@@ -6,15 +6,11 @@
 #include "vec2.h"
 #include "Tracy.hpp"
 
-#define _CRT_SECURE_NO_WARNINGS
-#define INV_PI = 0.31830988618379067154
-#define PLUS_INF = std::numeric_limits<float>::infinity();
-
 #ifndef UTILS
 #define UTILS
 
 
-float estimate_sample_variance(vec3 samples[], int n)
+inline float estimate_sample_variance(vec3 samples[], int n)
 {
     vec3 sum = 0;
     vec3 sum_sq = 0;
@@ -36,13 +32,14 @@ float estimate_sample_variance(vec3 samples[], int n)
 
 typedef struct { GLfloat R, G, B; } color_t;
 
-
+/*
 vec3 max(float a, vec3 b)
 {
     return vec3(std::max(a, b.x), std::max(a, b.y), std::max(a, b.z));
 }
+*/
 
-
+/*
 vec3 HableToneMap(vec3 color)
 {
     float A = 0.22; // Shoulder Strength
@@ -56,33 +53,29 @@ vec3 HableToneMap(vec3 color)
     color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - (E / F);
     return color;
 }
+*/
 
 
-void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int& s, int& y, double time)
+inline void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int& s, int& y, double time)
 {
 #pragma omp parallel for
     for (int y = 0; y < yres; y++)
     {
         for (int x = 0; x < xres; x++)
         {
-
-            #pragma omp atomic
             pixels[x + y * xres].R = 0.0f;
-            #pragma omp atomic
             pixels[x + y * xres].G = 0.0f;
-            #pragma omp atomic
             pixels[x + y * xres].B = 0.0f;
         }
     }
     
-
     s = 1;
     y = 0;
     time = 0;
 }
 
 
-auto get_time()
+inline auto get_time()
 {
     auto start = std::chrono::system_clock::now();
     return start;
@@ -95,7 +88,7 @@ auto get_time()
 #define  Pg  .587
 #define  Pb  .114
 
-vec3 changeSaturation(vec3& color, float change) {
+inline vec3 changeSaturation(vec3& color, float change) {
 
     double  P = sqrt(
         (color.x) * (color.x) * Pr +
@@ -130,13 +123,14 @@ static float inv_pi = 0.31830988618379067154;
 
 // trig identities
 
-
+/*
 float roughness_to_alpha(float roughness) {
     roughness = std::max(roughness, (float)1e-3);
     float x = std::log(roughness);
     return 1.62142f + 0.819955f * x + 0.1734f * x * x +
         0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
 }
+*/
 
 
 inline float power_heuristic(int nf, float fPdf, int ng, float gPdf) {

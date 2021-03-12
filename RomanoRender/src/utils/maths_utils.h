@@ -1,8 +1,12 @@
 #pragma once
 
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
+
 #include <cmath>
 #include <cstdint>
+#include <algorithm>
 
 #include "vec2.h"
 #include "vec3.h"
@@ -11,6 +15,10 @@
 #ifndef MATHS_UTILS
 #define MATHS_UTILS
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #define PLUS_INF std::numeric_limits<float>::infinity();
 #define MIN_INF -std::numeric_limits<float>::infinity();
 #define INV_LOG2 1.442695040888963387004650940071
@@ -18,10 +26,10 @@
 
 // helper functions
 template <typename T>
-inline T fit(T& s, T a1, T a2, T b1, T b2) { return b1 + ((s - a1) * (b2 - b1)) / (a2 - a1); }
+inline T fit(T s, T a1, T a2, T b1, T b2) { return b1 + ((s - a1) * (b2 - b1)) / (a2 - a1); }
 
 template <typename T>
-inline T fit01(T& x, T a, T b) { return x * (b - a) + a; }
+inline T fit01(T x, T a, T b) { return x * (b - a) + a; }
 
 template <typename T>
 inline T lerp(T a, T b, float t) { return (1 - t) * a + t * b; }
@@ -32,17 +40,18 @@ inline T clamp(T n, float lower, float upper) { return std::max(lower, std::min(
 inline float deg2rad(const float deg) { return deg * M_PI / 180; }
 inline float rad2deg(const float rad) { return rad * 180 / M_PI; }
 
-inline float log2(float x) { return std::log(x) * INV_LOG2; }
+inline float fastlog2(float x) { return std::log(x) * INV_LOG2; }
 inline float square(float x) { return x * x; }
 inline float modulo(float x) { return x - std::floor(x); }
 
-vec3 to_polar(const vec2& uv) {}
+vec3 to_polar(const vec2& uv);
 
 
 // trigonometry functions
 inline float CosTheta(const vec3& w) { return w.z; }
 inline float Cos2Theta(const vec3& w) { return w.z * w.z; }
 inline float AbsCosTheta(const vec3& w) { return std::abs(w.z); }
+#undef max // get rid of a compiling error with the std::max function
 inline float Sin2Theta(const vec3& w) { return std::max(0.0f, 1.0f - Cos2Theta(w)); }
 inline float SinTheta(const vec3& w) { return sqrt(Sin2Theta(w)); }
 inline float TanTheta(const vec3& w) { return SinTheta(w) / CosTheta(w); }

@@ -673,7 +673,7 @@ struct Parameter_Editor
 
     ~Parameter_Editor() {}
 
-    void Draw(int& change, bool& edited, Node& selected_node, std::vector<Node>& nodes, std::vector<Material>& materials, Render_Settings& settings, std::vector<Camera>& cameras, std::vector<Light>& lights, Console& console)
+    void Draw(int& change, bool& edited, Node& selected_node, std::vector<Node>& nodes, std::vector<Material>& materials, Render_Settings& settings, std::vector<Camera>& cameras, std::vector<Light*>& lights, Console& console)
     {
         ImGui::Begin("Parameters");
 

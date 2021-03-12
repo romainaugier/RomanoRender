@@ -38,35 +38,16 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-
-#include <OpenImageIO/imagebuf.h>
-#include <OpenImageIO/imagebufalgo.h>
-
-#include <iostream>
-#include <vector>
-#include <random>
-#include <limits>
-#include <chrono>
-#include <future>
-#include <algorithm>
-#include <math.h>
+#include "OpenImageIO/imagebuf.h"
 
 #include "scene/objloader.h"
-#include "utils/ray.h"
-#include "scene/camera.h"
-#include "utils/matrix.h"
-#include "scene/scene.h"
-#include "shading/material.h"
-#include "shading/light.h"
-#include "utils/utils.h"
-#include "render/render.h"
+#include "render/integrators.h"
 #include "app/log.h"
-#include "scene/settings.h"
-#include "utils/vec2.h"
-#include "render/sampler.h"
 #include "app/console.h"
-#include "app/nodeeditor.h"
+#include "scene/scene.h"
+//#include "app/nodeeditor.h"
 #include "Tracy.hpp"
+#include "utils/utils.h"
 
 
 int main(int, char**)
@@ -83,32 +64,31 @@ int main(int, char**)
 
     const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
     //const char* path = "D:/GenepiRender/Models/1964_shelby_cobra_daytona.obj";
-    const char* path = "D:/GenepiRender/Models/mesh.obj";
+    const char* path = "D:/dev/Utils/Models/sphere.obj";
     
     Logger log(3);
     Stats render_stats(0);
     Render_Settings settings(xres, yres, samples, bounces, log, tile_number);
-    //camera cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
+    Camera cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
 
     std::vector<Camera> cameras;
 
-    //cameras.push_back(cam);
+    cameras.push_back(cam);
 
-    std::vector<std::vector<vec2>> sequence = load_sequences("../../Samples");
+    std::vector<std::vector<vec2>> sequence = load_sequences("D:/dev/Repos/Samples");
 
     int* pixel_ids = new int[settings.xres * settings.yres];
     
 #pragma omp parallel for
     for (int i = 0; i < settings.xres * settings.yres - 1; i++)
     {
-        pixel_ids[i] = (int)(generate_random_float() * (sequence.size() - 1));
+        pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 1));
     }
 
 
-    std::vector<Light> lights;
+    std::vector<Light*> lights;
 
-    Light env(Light_Type::Dome, 1.0f, vec3(0.8f, 0.9f, 1.0f), vec3(0.0f));
-    //lights.push_back(env);
+    lights.push_back(new Dome_Light(vec3(1.0f), 1.0f));
 
     settings.device = initializeDevice();
     settings.scene = rtcNewScene(settings.device);
@@ -118,11 +98,8 @@ int main(int, char**)
 
     std::vector<Material> materials;
 
-
-
     color_t* pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
     color_t* new_pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
-
 
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
@@ -247,16 +224,16 @@ int main(int, char**)
 
 
     // fonts
-    ImFont* font_bold = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-Regular.ttf", 13.0f);
-    ImFont* font_italic = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-Italic.ttf", 13.0f);
-    ImFont* font_extrabolditalic = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-ExtraBoldItalic.ttf", 13.0f);
-    ImFont* font_lightitalic = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-LightItalic.ttf", 13.0f);
-    ImFont* font_bolditalic = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-BoldItalic.ttf", 13.0f);
-    ImFont* font_semibolditalic = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-SemiboldItalic.ttf", 13.0f);
-    ImFont* font_light = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-Light.ttf", 13.0f);
-    ImFont* font_regular = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-Bold.ttf", 13.0f); 
-    ImFont* font_semibold = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-Semibold.ttf", 13.0f);
-    ImFont* font_extrabold = io.Fonts->AddFontFromFileTTF("../../Fonts/OpenSans-ExtraBold.ttf", 13.0f);
+    ImFont* font_bold = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-Regular.ttf", 13.0f);
+    ImFont* font_italic = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-Italic.ttf", 13.0f);
+    ImFont* font_extrabolditalic = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-ExtraBoldItalic.ttf", 13.0f);
+    ImFont* font_lightitalic = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-LightItalic.ttf", 13.0f);
+    ImFont* font_bolditalic = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-BoldItalic.ttf", 13.0f);
+    ImFont* font_semibolditalic = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-SemiboldItalic.ttf", 13.0f);
+    ImFont* font_light = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-Light.ttf", 13.0f);
+    ImFont* font_regular = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-Bold.ttf", 13.0f); 
+    ImFont* font_semibold = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-Semibold.ttf", 13.0f);
+    ImFont* font_extrabold = io.Fonts->AddFontFromFileTTF("D://Fonts/OpenSans-ExtraBold.ttf", 13.0f);
 
 
     // Setup Platform/Renderer bindings
@@ -301,10 +278,16 @@ int main(int, char**)
     glBindTexture(GL_TEXTURE_2D, 0);
 
     Console console;
-    Node_Editor editor;
-    Parameter_Editor param_editor;
+    //Node_Editor editor;
+    //Parameter_Editor param_editor;
 
-    Node selected_node(Node_Type::None, 0, "No Node Selected");
+    //Node selected_node(Node_Type::None, 0, "No Node Selected");
+
+    std::vector<Material> obj_materials;
+
+    std::vector<RTCGeometry> geo = LoadObject(settings.device, "D:/dev/Utils/Models/sphere.obj", obj_materials, console);
+
+    SendToScene(settings.device, settings.scene, geo, materials, obj_materials);
 
 
     bool edited = false;
@@ -321,11 +304,11 @@ int main(int, char**)
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-        param_editor.Draw(change, edited, selected_node, editor.nodes, materials, settings, cameras, lights, console);
+        //param_editor.Draw(change, edited, selected_node, editor.nodes, materials, settings, cameras, lights, console);
 
-        selected_node = Node(Node_Type::None, 0, "No Node Selected");
+        //selected_node = Node(Node_Type::None, 0, "No Node Selected");
 
-        editor.Draw("Render Graph", console, selected_node, settings, materials, cameras, lights, change, edited);
+        //editor.Draw("Render Graph", console, selected_node, settings, materials, cameras, lights, change, edited);
 
 
 
@@ -366,7 +349,7 @@ int main(int, char**)
 #pragma omp parallel for
                 for (int i = 0; i < settings.xres * settings.yres - 1; i++)
                 {
-                    pixel_ids[i] = (int)(generate_random_float() * (sequence.size() - 1));
+                    pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 1));
                 }
 
                 pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));

@@ -122,7 +122,7 @@ std::vector<std::vector<vec2>> load_sequences(const char* directory)
 
     std::vector<std::vector<vec2>> sequences;
 
-    for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(full_path))
+    for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(directory))
     {
         std::string to_s = entry.path().string();
         std::vector<vec2> seq = load_sample_sequence(to_s.c_str());

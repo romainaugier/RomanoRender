@@ -1,6 +1,5 @@
 #pragma once
 #include "utils/vec3.h"
-#include <OpenImageIO/imagebuf.h>
 
 
 #ifndef MATERIAL
