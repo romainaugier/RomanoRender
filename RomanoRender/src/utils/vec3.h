@@ -24,7 +24,7 @@ struct alignas(16) vec3
 
 
 // ostream operator for easier cout
-std::ostream& operator<<(std::ostream& out, const vec3& v) { out << v.x << ", " << v.y << ", " << v.z << std::endl; return out; }
+inline std::ostream& operator<<(std::ostream& out, const vec3& v) { out << v.x << ", " << v.y << ", " << v.z << std::endl; return out; }
 
 
 // maths operators

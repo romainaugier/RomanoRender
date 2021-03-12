@@ -39,7 +39,7 @@
     <ClInclude Include="src\shading\material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\render.h">
+    <ClInclude Include="src\render\integrators.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\shading\light.h">
@@ -58,9 +58,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\scene\objloader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include_all.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\vec2.h">
@@ -161,7 +158,10 @@
     <ClCompile Include="src\scene\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\render.cpp">
+    <ClCompile Include="src\render\integrators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

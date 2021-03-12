@@ -2,8 +2,6 @@
 
 
 #include "utils/vec3.h"
-#include "OpenImageIO/imagebuf.h"
-#include <OpenImageIO/imageio.h>
 #include "utils/maths_utils.h"
 #include "utils/matrix.h"
 #include "utils/sampling_utils.h"
@@ -27,13 +25,15 @@ class Light
 public:
 	Light_Type type = Light_Type::Point;
 
+	virtual ~Light() {}
+
 	virtual vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) const = 0;
 	virtual vec3 return_light_throughput(const float& d) const = 0;
 };
 
 
 // point light
-class Point_Light : Light
+class Point_Light : public Light
 {
 public:
 	vec3 position;
@@ -41,6 +41,8 @@ public:
 	float intensity;
 
 	Light_Type type = Light_Type::Point;
+
+	Point_Light() {}
 
 	Point_Light(vec3 position, float intensity, vec3 color) :
 		position(position),
@@ -55,7 +57,7 @@ public:
 
 
 // distant light
-class Distant_Light : Light
+class Distant_Light : public Light
 {
 public:
 	vec3 orientation;
@@ -64,6 +66,8 @@ public:
 	float angle;
 
 	Light_Type type = Light_Type::Distant;
+
+	Distant_Light() {}
 
 	Distant_Light(vec3 orientation, vec3 color, float intensity, float angle) : 
 		orientation(orientation),
@@ -79,15 +83,23 @@ public:
 
 
 // square light
-class Square_Light : Light
+class Square_Light : public Light
 {
 public:
-	vec3 color;
-	float intensity;
-	mat44 transform_mat;
-	vec2 size;
+	vec3 color = vec3(1.0f);
+	float intensity = 1.0f;
+	vec3 normal;
+	mat44 transform_mat = mat44();
+	vec2 size = vec2(1.0f, 1.0f);
 
 	Light_Type type = Light_Type::Square;
+
+	Square_Light() {}
+
+	Square_Light(vec3 color, float intensity) :
+		color(color),
+		intensity(intensity)
+	{}
 
 	vec3 return_light_throughput(const float& d) const override;
 
@@ -96,13 +108,21 @@ public:
 
 
 // dome light
-class Dome_Light : Light
+class Dome_Light : public Light
 {
 public:
-	vec3 color;
-	float intensity;
+	vec3 color = vec3(1.0f);
+	float intensity = 1.0f;
+	bool visible = true;
 
 	Light_Type type = Light_Type::Dome;
+
+	Dome_Light() {}
+
+	Dome_Light(vec3 color, float intensity) :
+		color(color),
+		intensity(intensity)
+	{}
 
 	vec3 return_light_throughput(const float& d = 0.0f) const override;
 

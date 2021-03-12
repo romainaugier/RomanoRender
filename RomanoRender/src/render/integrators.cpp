@@ -1,8 +1,8 @@
-#include "render.h"
+#include "integrators.h"
 
 
 // ray cast function used to render. Return a vec3 color
-vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::vector<Material>& mats, Render_Settings& settings, std::vector<Light>& lights, int depth[], std::vector<int>& light_path, int samples[], Stats& stat)
+vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::vector<Material>& mats, Render_Settings& settings, std::vector<Light*>& lights, int depth[], std::vector<int>& light_path, int samples[], Stats& stat)
 {
 
     //const float random_float = generate_random_float();
@@ -64,8 +64,6 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
         vec3 hit_sss_color = mats[hit_mat_id].sss_color;
 
         vec3 hit_normal = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z).normalize();
-
-
         vec3 hit_pos = vec3(rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z) + rayhit.ray.tfar * vec3(rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z);
 
         vec3 kd(1.0f);
@@ -82,25 +80,34 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
         {
             for (int i = 0; i < samples[1]; i++)
             {
+                // used to convert parent ptr to subtype ptr to get subtype specific members using branched dynamic cast
+                Point_Light* ptlight = nullptr;
+                Distant_Light* distlight = nullptr;
+                Square_Light* sqlight = nullptr;
+                Dome_Light* domelight = nullptr;
+
                 vec3 area_sample_position(0.0f);
                 int hdri_id = 1;
 
-                vec3 ray_dir = light.return_ray_direction(hit_pos, sample);
+                vec3 ray_dir = light->return_ray_direction(hit_pos, sample);
 
                 Ray new_ray(hit_pos, ray_dir);
 
                 float distance = 10000.0f;
                 float area_shadow = 1.0f;
 
-                if (light.type == Light_Type::Point) distance = dist(hit_pos, light.position) - 0.001f;
+                if (ptlight = dynamic_cast<Point_Light*>(light)) distance = dist(hit_pos, ptlight->position) - 0.001f;
 
-                if (light.type == Light_Type::Square)
+                else if (sqlight = dynamic_cast<Square_Light*>(light))
                 {
-                    if (dot(ray_dir, light.orientation) > 0) continue;
-                    vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
-                    distance = dist(hit_pos, area_sample_position) - 0.001f;
-                    float d = dot(light.orientation, ray_dir);
-                    area_shadow = -d;
+                    if (dot(ray_dir, sqlight->normal) > 0) continue;
+                    else
+                    {
+                        vec3 pos = vec3(sqlight->transform_mat[4], sqlight->transform_mat[8], sqlight->transform_mat[12]);
+                        distance = dist(hit_pos, area_sample_position) - 0.001f;
+                        float d = dot(sqlight->normal, ray_dir);
+                        area_shadow = -d;
+                    }
                 }
 
                 float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
@@ -122,24 +129,21 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
 
                 if (shadow.tfar > 0.0f)
                 {
-                    radiance += (return_light_int(light, ray_dir, distance, hdri_id) * NdotL * area_shadow);
+                    radiance += (light->return_light_throughput(distance) * NdotL * area_shadow);
 
                     if (hit_specular > 0.0f)
                     {
-                        if (light.light_type == Light_Type::Dome && !light.has_map) ggx += 0;
-                        else
-                        {
-                            vec3 H = (ray_dir + -r.direction()).normalize();
-                            float NdotH = Saturate(dot(hit_normal, H));
-                            float LdotH = Saturate(dot(ray_dir, H));
-                            float NdotV = Saturate(dot(hit_normal, -r.direction()));
+                        vec3 H = (ray_dir + -r.direction()).normalize();
+                        float NdotH = Saturate(dot(hit_normal, H));
+                        float LdotH = Saturate(dot(ray_dir, H));
+                        float NdotV = Saturate(dot(hit_normal, -r.direction()));
 
-                            float D = GGXNormalDistribution(NdotH, hit_roughness);
-                            float G = SchlickMaskingTerm(NdotL, NdotV, hit_roughness);
-                            vec3 F = SchlickFresnel(hit_ior, LdotH);
+                        float D = ggx_normal_distribution(NdotH, hit_roughness);
+                        float G = schlick_masking_term(NdotL, NdotV, hit_roughness);
+                        vec3 F = schlick_fresnel(hit_ior, LdotH);
 
-                            ggx += (D * G * F / (4 * std::max(0.001f, NdotV))) * inv_pi;
-                        }
+                        ggx += (D * G * F / (4 * std::max(0.001f, NdotV)));
+                        
                     }
                 }
             }
@@ -167,7 +171,7 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
 
             light_path.push_back(3);
 
-            refrac += cast_ray(s, sampler, new_ray, color, mats, settings, lights, new_depth, light_path, samples, stat) * mats[hit_mat_id].refraction_color;
+            refrac += pathtrace(s, sampler, new_ray, color, mats, settings, lights, new_depth, light_path, samples, stat) * mats[hit_mat_id].refraction_color;
         }
 
         if (hit_sss > 0.0f)
@@ -244,29 +248,37 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
                 {
                     for (int i = 0; i < samples[1]; i++)
                     {
+                        // used to convert parent ptr to subtype ptr to get subtype specific members using branched dynamic cast
+                        Point_Light* ptlight = nullptr;
+                        Distant_Light* distlight = nullptr;
+                        Square_Light* sqlight = nullptr;
+                        Dome_Light* domelight = nullptr;
+
                         vec3 area_sample_position(0.0f);
-                        int id = s + i;
                         int hdri_id = 1;
 
-                        float light_pdf = 1.0f;
+                        vec3 ray_dir = light->return_ray_direction(hit_pos, sample);
 
-                        vec3 ray_dir = return_raydir(hdri_id, sample, light, end_position, end_normal, area_sample_position, light_pdf);
-
-                        Ray new_ray(end_position, ray_dir);
+                        Ray new_ray(hit_pos, ray_dir);
 
                         float distance = 10000.0f;
                         float area_shadow = 1.0f;
 
-                        if (light.light_type == Light_Type::Point) distance = dist(end_position, light.position) - 0.001f;
+                        if (ptlight = dynamic_cast<Point_Light*>(light)) distance = dist(hit_pos, ptlight->position) - 0.001f;
 
-                        if (light.light_type == Light_Type::Square)
+                        else if (sqlight = dynamic_cast<Square_Light*>(light))
                         {
-                            if (dot(ray_dir, light.orientation) > 0) continue;
-                            vec3 pos = vec3(light.v0 + light.v1 + light.v2 + light.v3) / 4;
-                            distance = dist(end_position, area_sample_position) - 0.001f;
-                            float d = dot(light.orientation, ray_dir);
-                            area_shadow = -d;
+                            if (dot(ray_dir, sqlight->normal) > 0) continue;
+                            else
+                            {
+                                vec3 pos = vec3(sqlight->transform_mat[4], sqlight->transform_mat[8], sqlight->transform_mat[12]);
+                                distance = dist(hit_pos, area_sample_position) - 0.001f;
+                                float d = dot(sqlight->normal, ray_dir);
+                                area_shadow = -d;
+                            }
                         }
+
+                        float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
 
                         RTCRay shadow;
                         shadow.org_x = new_ray.origin().x;
@@ -275,16 +287,17 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
                         shadow.dir_x = new_ray.direction().x;
                         shadow.dir_y = new_ray.direction().y;
                         shadow.dir_z = new_ray.direction().z;
-                        shadow.tnear = 0.0f;
+                        shadow.tnear = 0.001f;
                         shadow.tfar = distance;
                         shadow.mask = -1;
                         shadow.flags = 0;
+
 
                         rtcOccluded1(settings.scene, &context, &shadow);
 
                         if (shadow.tfar > 0.0f)
                         {
-                            sss_light_contribution += return_light_int(light, ray_dir, distance, hdri_id) * inv_pi;
+                            sss_light_contribution += (light->return_light_throughput(distance) * NdotL * area_shadow * inv_pi);
                         }
                     }
                 }
@@ -294,13 +307,6 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
                     hit_sss_color.z * fit(t * absorption, 0.0f, radius.z, 1.0f, 0.0f));
 
                 trans += sss_light_contribution * transmitted_color;
-            }
-
-            else
-            {
-                trans = vec3(hit_sss_color.x * fit(t * absorption, 0.0f, radius.x, 1.0f, 0.0f),
-                    hit_sss_color.y * fit(t * absorption, 0.0f, radius.y, 1.0f, 0.0f),
-                    hit_sss_color.z * fit(t * absorption, 0.0f, radius.z, 1.0f, 0.0f)) * (1 - t);
             }
         }
 
@@ -337,7 +343,7 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
 
             Ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
 
-            indirect += cast_ray(s, sampler, new_ray, color, mats, settings, lights, new_depth, light_path, samples, stat);
+            indirect += pathtrace(s, sampler, new_ray, color, mats, settings, lights, new_depth, light_path, samples, stat);
         }
 
 
@@ -351,17 +357,19 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
     {
         for (auto light : lights)
         {
-            if (light.light_type == Light_Type::Dome)
+            Dome_Light* domelight = nullptr;
+
+            if (domelight = dynamic_cast<Dome_Light*>(light))
             {
                 int id = 0;
 
                 if (depth[0] >= 16 || depth[0] >= 16 && depth[1] < 6 || depth[0] >= 16 && depth[2] < 10) id = -1;
                 if (light_path.size() > 1 && light_path[0] == 1 && light_path[1] == 3) id = -1;
 
-                if (depth[0] >= 16 && !light.visible) return vec3(0.0f);
+                if (depth[0] >= 16 && !domelight->visible) return vec3(0.0f);
 
                 float d = 0.0f;
-                color = return_light_int(light, r.direction(), d, id);
+                color = domelight->return_light_throughput(d);
             }
         }
     }
@@ -385,7 +393,7 @@ vec3 cast_ray(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::
 
 
 // funtion used to render a single pixel, used for progressive rendering
-void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light>& lights, int samples[], int bounces[], Stats& stat)
+void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
 {
     float scale = tan(deg2rad(cam.fov * 0.5));
 
@@ -395,9 +403,8 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
     vec3 xAxis = (cross(up, zAxis).normalize());
     vec3 yAxis = cross(zAxis, xAxis);
 
-    Matrix44<float> cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, cam.pos.x, cam.pos.y, cam.pos.z, 1.0f);
+    mat44 cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, cam.pos.x, cam.pos.y, cam.pos.z, 1.0f);
 
-    vec3 rayOriginWorld, rayPWorld;
     vec3 campos2(0.0, 0.0, 0.0);
 
     auto start_tile = std::chrono::system_clock::now();
@@ -419,9 +426,13 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
     float x_ = (2 * (x + dx) / (float)settings.xres - 1) * cam.aspect * scale;
     float y_ = (1 - 2 * (y + dy) / (float)settings.yres) * scale;
 
-    cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
-    cameraToWorld.multVecMatrix(vec3(x_, y_, -1), rayPWorld);
-    cameraToWorld.multVecMatrix(vec3(x_, y_, -1), rayPWorld);
+    vec3 sample_pos = vec3(x_, y_, -1);
+
+    //cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
+    //cameraToWorld.multVecMatrix(vec3(x_, y_, -1), rayPWorld);
+
+    vec3 rayOriginWorld = transform(campos2, cameraToWorld);
+    vec3 rayPWorld = transform(sample_pos, cameraToWorld);
     vec3 rayDir = vec3(rayPWorld.x, rayPWorld.y, rayPWorld.z) - vec3(rayOriginWorld.x, rayOriginWorld.y, rayOriginWorld.z);
 
     // depth of field
@@ -432,7 +443,7 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
 
     std::vector<int> light_path;
 
-    col = cast_ray(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
+    col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
 
     //col = HableToneMap(col);
 
@@ -451,7 +462,7 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
 
 
 // funtion used to render a single pixel, used for progressive rendering
-void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light>& lights, int samples[], int bounces[], Stats& stat)
+void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
 {
     float scale = tan(deg2rad(cam.fov * 0.5));
 
@@ -461,9 +472,8 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
     vec3 xAxis = (cross(up, zAxis).normalize());
     vec3 yAxis = cross(zAxis, xAxis);
 
-    Matrix44<float> cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, cam.pos.x, cam.pos.y, cam.pos.z, 1.0f);
+    mat44 cameraToWorld(xAxis.x, xAxis.y, xAxis.z, 0.0f, yAxis.x, yAxis.y, yAxis.z, 0.0f, zAxis.x, zAxis.y, zAxis.z, 0.0f, cam.pos.x, cam.pos.y, cam.pos.z, 1.0f);
 
-    vec3 rayOriginWorld, rayPWorld;
     vec3 campos2(0.0, 0.0, 0.0);
 
     auto start_tile = std::chrono::system_clock::now();
@@ -480,9 +490,13 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
     float x_ = (2 * (x + dx) / (float)settings.xres - 1) * cam.aspect * scale;
     float y_ = (1 - 2 * (y + dy) / (float)settings.yres) * scale;
 
+    vec3 sample_pos = vec3(x_, y_, -1);
 
-    cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
-    cameraToWorld.multVecMatrix(vec3(x_, y_, -1), rayPWorld);
+    //cameraToWorld.multVecMatrix(campos2, rayOriginWorld);
+    //cameraToWorld.multVecMatrix(vec3(x_, y_, -1), rayPWorld);
+
+    vec3 rayOriginWorld = transform(campos2, cameraToWorld);
+    vec3 rayPWorld = transform(sample_pos, cameraToWorld);
     vec3 rayDir = vec3(rayPWorld.x, rayPWorld.y, rayPWorld.z) - vec3(rayOriginWorld.x, rayOriginWorld.y, rayOriginWorld.z);
 
     // depth of field
@@ -493,8 +507,8 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
 
     std::vector<int> light_path;
 
-    if (generate_random_float() > 0.75f)
-        col = cast_ray(s, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
+    if (generate_random_float_fast(x * y + s) > 0.75f)
+        col = pathtrace(s, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
 
     //col = HableToneMap(col);
 
@@ -513,7 +527,7 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
 
 
 // function used to render progressively to the screen
-void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light>& lights, int samples[], int bounces[], Stats& stat)
+void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
 {
     auto start = std::chrono::system_clock::now();
 
@@ -539,7 +553,7 @@ void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& 
 }
 
 
-void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light>& lights, int samples[], int bounces[], Stats& stat)
+void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
 {
     auto start = std::chrono::system_clock::now();
 
@@ -550,7 +564,7 @@ void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sa
     {
         for (int x = 0; x < settings.xres; x++)
         {
-            if (generate_random_float_2(x * z + 1) > 0.75f)
+            if (generate_random_float_fast(x * z + 1) > 0.75f)
             {
                 int id = ids[x + z * settings.xres];
                 render_p(s, sampler[id], pixels, x, z, settings, cam, mats, lights, samples, bounces, stat);

@@ -28,7 +28,7 @@ struct Node
 	Camera cam;
 	char path[512] = "Path to your object";
 	std::vector<Material> materials;
-	Light light;
+	Dome_Light light;
 
 
 	explicit Node(const Node_Type t) : type(t) 

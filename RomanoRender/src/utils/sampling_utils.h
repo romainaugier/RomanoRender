@@ -11,6 +11,11 @@
 #include "vec2.h"
 #include "maths_utils.h"
 
+// to use sscanf without errors
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS 
+#endif
+
 
 // sampling utils
 vec3 sample_ray_in_hemisphere(const vec3& hit_normal, const vec2& sample);
