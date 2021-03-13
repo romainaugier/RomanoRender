@@ -108,6 +108,7 @@ Hdri crazyness :
 
 Combining all the cool stuff I implemented lately :
 ![gold_eagle](https://imgur.com/GjSkEqd.png)
+(thank's to Flore Dechorgnat for the shading -> https://www.instagram.com/flore_dchrgnt)
 ![pxr_kitchen_lourd](https://cdn.discordapp.com/attachments/776720237218889738/791246572192923648/kitchen.jpg)
 
 Random Walk SSS :
