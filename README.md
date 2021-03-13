@@ -4,11 +4,9 @@
 I'm currently working on the CMake setup to get the files more easily if you want to fork the repository
 *******************************************************************************************************************
 
-Monte Carlo PathTracer
-
 First of all, I'd like to thank everyone that helped and helps me on the Graphics Programming discord, it's an amazing community, that you can find here : https://discord.gg/2nyse8kpKb
 
-My first project using C++, the goal of this is to learn both this language, software engineering and more about rendering, maths and computer graphics.
+This is my first project using C++, the goal of this is to learn both this language, software engineering, rendering, maths and computer graphics.
 
 Features list :
 - Intel embree3 for fast path tracing
