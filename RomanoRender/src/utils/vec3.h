@@ -1,8 +1,11 @@
 #pragma once
 #include <iostream>
+#include "Tracy.hpp"
 
 #ifndef VEC3
 #define VEC3
+
+inline float rsqrt(float num);
 
 struct alignas(16) vec3
 {
@@ -19,8 +22,28 @@ struct alignas(16) vec3
 
 	float length() const { return sqrtf(x * x + y * y + z * z); }
 	float length2() const { return x * x + y * y + z * z; }
+	vec3 q_normalize() const { float t = rsqrt(x * x + y * y + z * z); return vec3(x * t, y * t, z * t); }
 	vec3 normalize() const { float t = 1.0f / length(); return vec3(x * t, y * t, z * t); }
 };
+
+
+inline float rsqrt(float num)
+{
+	int i;
+	float x2, y;
+	const float threehalfs = 1.5f;
+
+	x2 = num * 0.5f;
+	y = num;
+
+	memcpy(&i, &y, sizeof(float));
+	i = 0x5f3759df - (i >> 1);
+
+	memcpy(&y, &i, sizeof(float));
+	y = y * (threehalfs - (x2 * y * y));
+
+	return y;
+}
 
 
 // ostream operator for easier cout

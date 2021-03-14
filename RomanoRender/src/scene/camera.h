@@ -1,4 +1,7 @@
 #pragma once
+
+#include <string>
+
 #include "utils/ray.h"
 #include "utils/vec3.h"
 #include "utils/maths_utils.h"
@@ -62,6 +65,8 @@ public:
 	float focus_dist;
 	float anamorphic_x;
 	float anamorphic_y;
+
+	std::string name;
 };
 
 #endif

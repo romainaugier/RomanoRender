@@ -80,7 +80,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
         {
             for (int i = 0; i < samples[1]; i++)
             {
-                // used to convert parent ptr to subtype ptr to get subtype specific members using branched dynamic cast
+                // use to convert parent ptr to subtype ptr to get subtype specific members using branched dynamic cast
                 Point_Light* ptlight = nullptr;
                 Distant_Light* distlight = nullptr;
                 Square_Light* sqlight = nullptr;
@@ -363,13 +363,14 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
             {
                 int id = 0;
 
-                if (depth[0] >= 16 || depth[0] >= 16 && depth[1] < 6 || depth[0] >= 16 && depth[2] < 10) id = -1;
-                if (light_path.size() > 1 && light_path[0] == 1 && light_path[1] == 3) id = -1;
+                if (depth[0] >= 6 || depth[0] >= 6 && depth[1] < 6 || depth[0] >= 6 && depth[2] < 10) id = -1;
+                
+                else if (light_path.size() > 1 && light_path[0] == 1 && light_path[1] == 3) id = -1;
 
-                if (depth[0] >= 16 && !domelight->visible) return vec3(0.0f);
+                else if (depth[0] >= 6 && !domelight->visible) return vec3(0.0f);
 
                 float d = 0.0f;
-                color = domelight->return_light_throughput(d);
+                return domelight->return_light_throughput(d);
             }
         }
     }

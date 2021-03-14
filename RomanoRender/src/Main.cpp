@@ -1,6 +1,5 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "imnodes.h"
 #include <stdio.h>
 
 #define IMGUI_IMPL_OPENGL_LOADER_GL3W
@@ -38,12 +37,15 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+
 #include "OpenImageIO/imagebuf.h"
 
-#include "scene/objloader.h"
 #include "render/integrators.h"
 #include "app/log.h"
 #include "app/console.h"
+#include "app/outliner.h"
+#include "app/menubar.h"
+#include "app/shelf.h"
 #include "scene/scene.h"
 //#include "app/nodeeditor.h"
 #include "Tracy.hpp"
@@ -52,6 +54,7 @@ static void glfw_error_callback(int error, const char* description)
 
 int main(int, char**)
 {
+    // initializing rendering parameters
     int xres = 800;
     int yres = 800;
     int tile_number = 8;
@@ -59,22 +62,26 @@ int main(int, char**)
     int nee_samples = 1;
     int gi_samples = 1;
     int samples[] = { unified_samples, nee_samples, gi_samples };
-    int bounces[] = { 16, 6, 10, 1 };
+    int bounces[] = { 6, 6, 10, 1 };
     float variance_threshold = 0.001;
 
-    const char* filename = "D:/GenepiRender/Renders/pixar_kitchen.exr";
-    //const char* path = "D:/GenepiRender/Models/1964_shelby_cobra_daytona.obj";
-    const char* path = "D:/dev/Utils/Models/sphere.obj";
-    
+    // initializing different object we will need to render
     Logger log(3);
     Stats render_stats(0);
     Render_Settings settings(xres, yres, samples, bounces, log, tile_number);
-    Camera cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
-
+    Camera initial_cam(vec3(0.0f, 7.5f, 30.0f), vec3(0.0f, 7.5f, 0.0f), 50, settings.xres, settings.yres, 0.0f, 20.0f, 1.0f, 1.0f);
+    initial_cam.name = "Default Camera";
+    
+    // initializing entities containers
+    std::vector<RTCGeometry> geometry;
+    std::vector<Material> materials;
+    std::vector<Light*> lights;
     std::vector<Camera> cameras;
 
-    cameras.push_back(cam);
+    cameras.push_back(initial_cam);
+    //lights.push_back(new Dome_Light(vec3(1.0f), 1.0f)); // this can be optional
 
+    // loading sample sequences
     std::vector<std::vector<vec2>> sequence = load_sequences("D:/dev/Repos/Samples");
 
     int* pixel_ids = new int[settings.xres * settings.yres];
@@ -85,19 +92,14 @@ int main(int, char**)
         pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 1));
     }
 
-
-    std::vector<Light*> lights;
-
-    lights.push_back(new Dome_Light(vec3(1.0f), 1.0f));
-
+    // initializing embree device and scene
     settings.device = initializeDevice();
     settings.scene = rtcNewScene(settings.device);
 
     rtcSetSceneBuildQuality(settings.scene, RTC_BUILD_QUALITY_HIGH);
     rtcSetSceneFlags(settings.scene, RTC_SCENE_FLAG_COMPACT | RTC_SCENE_FLAG_ROBUST);
 
-    std::vector<Material> materials;
-
+    // initializing image buffers 
     color_t* pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
     color_t* new_pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
 
@@ -110,8 +112,6 @@ int main(int, char**)
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 
 
     // Create window with graphics context
@@ -148,18 +148,24 @@ int main(int, char**)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    imnodes::Initialize();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-    // Setup Dear ImGui style
+    // setup Dear ImGui style
     ImGui::StyleColorsDark();
 
     // docking
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // style
     ImGuiStyle* style = &ImGui::GetStyle();
 
+    // config
+    style->WindowBorderSize = 0.0f;
+    style->FrameBorderSize = 0.0f;
+    style->ChildBorderSize = 0.0f;
+    style->PopupBorderSize = 0.0f;
+    style->TabBorderSize = 0.0f;
     style->WindowPadding = ImVec2(15, 15);
     style->WindowRounding = 0.0f;
     style->FramePadding = ImVec2(5, 5);
@@ -177,8 +183,8 @@ int main(int, char**)
     style->GrabRounding = 0.0f;
     style->LogSliderDeadzone = 0.0f;
     style->ScrollbarRounding = 0.0f;
-
-    style->WindowMenuButtonPosition = ImGuiDir_Left;
+    style->DisplaySafeAreaPadding = ImVec2(0.0f, 0.0f);
+    style->WindowMenuButtonPosition = ImGuiDir_None;
 
     // colors
     style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
@@ -221,6 +227,7 @@ int main(int, char**)
     style->Colors[ImGuiCol_TabActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
     style->Colors[ImGuiCol_DockingPreview] = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
     style->Colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+    style->Colors[ImGuiCol_MenuBarBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
 
 
     // fonts
@@ -277,18 +284,16 @@ int main(int, char**)
    
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    // declaring all the editors
     Console console;
-    //Node_Editor editor;
-    //Parameter_Editor param_editor;
+    Outliner outliner;
+    MenuBar menubar;
+    Geometry_Shelf geo_shelf;
+    Light_Shelf light_shelf;
+    Camera_Shelf cam_shelf;
 
-    //Node selected_node(Node_Type::None, 0, "No Node Selected");
-
-    std::vector<Material> obj_materials;
-
-    std::vector<RTCGeometry> geo = LoadObject(settings.device, "D:/dev/Utils/Models/sphere.obj", obj_materials, console);
-
-    SendToScene(settings.device, settings.scene, geo, materials, obj_materials);
-
+    // initializing the file dialog texture methods
+    file_dialog_init();
 
     bool edited = false;
     int change = 0;
@@ -304,13 +309,19 @@ int main(int, char**)
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-        //param_editor.Draw(change, edited, selected_node, editor.nodes, materials, settings, cameras, lights, console);
+        // draw the different windows
 
-        //selected_node = Node(Node_Type::None, 0, "No Node Selected");
+        // main menu bar
+        menubar.draw();
 
-        //editor.Draw("Render Graph", console, selected_node, settings, materials, cameras, lights, change, edited);
+        // geometry shelf
+        geo_shelf.draw(settings, geometry, materials, lights, cameras, console);
 
+        // light shelf
+        light_shelf.draw(settings, geometry, materials, lights, cameras, console);
 
+        // cameras shelf
+        cam_shelf.draw(settings, geometry, materials, lights, cameras, console);
 
         if (change > 0 || edited)
         {
@@ -589,14 +600,18 @@ int main(int, char**)
             ImGui::End();
         }
 
-        // Console
+        // console
         bool o = true;
         console.Draw("Console", &o);
 
+        // outliner
+        outliner.draw(cameras, lights, console);
+
         // Rendering
         ImGui::Render();
-        int display_w, display_h;
 
+        
+        int display_w, display_h;
         change--;
 
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -612,7 +627,6 @@ int main(int, char**)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-    imnodes::Shutdown();
 
     glfwDestroyWindow(window);
     glfwTerminate();

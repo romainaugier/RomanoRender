@@ -128,6 +128,7 @@
       </UndefinePreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <DebugInformationFormat>None</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,11 +164,14 @@
       </UndefinePreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FloatingPointModel>Fast</FloatingPointModel>
       <CallingConvention>Cdecl</CallingConvention>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -192,6 +196,7 @@
       </UndefinePreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <DebugInformationFormat>None</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -237,14 +242,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="imgui\imconfig.h" />
+    <ClInclude Include="imgui\ImFileDialog.h" />
+    <ClInclude Include="imgui\imgui.h" />
+    <ClInclude Include="imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="imgui\imgui_internal.h" />
+    <ClInclude Include="imgui\imstb_rectpack.h" />
+    <ClInclude Include="imgui\imstb_textedit.h" />
+    <ClInclude Include="imgui\imstb_truetype.h" />
+    <ClInclude Include="imgui\stb_image.h" />
     <ClInclude Include="src\app\console.h" />
-    <ClInclude Include="src\app\nodes.h" />
-    <ClInclude Include="src\app\nodeeditor.h" />
+    <ClInclude Include="src\app\filedialog.h" />
+    <ClInclude Include="src\app\menubar.h" />
+    <ClInclude Include="src\app\outliner.h" />
+    <ClInclude Include="src\app\renderview.h" />
+    <ClInclude Include="src\app\shelf.h" />
     <ClInclude Include="src\maths\maths.h" />
     <ClInclude Include="src\scene\tinyobjl.h" />
     <ClInclude Include="src\shading\bsdf.h" />
     <ClInclude Include="src\scene\camera.h" />
-    <ClInclude Include="imgui\imnodes.h" />
     <ClInclude Include="src\shading\light.h" />
     <ClInclude Include="src\app\log.h" />
     <ClInclude Include="src\Tracy.hpp" />
@@ -263,21 +280,29 @@
     <ClInclude Include="src\utils\utils.h" />
     <ClInclude Include="src\utils\vec2.h" />
     <ClInclude Include="src\utils\vec3.h" />
+    <ClInclude Include="src\utils\windows_utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="imgui\imgui_tables.cpp" />
-    <ClCompile Include="src\app\gl3w.c" />
+    <ClCompile Include="imgui\ImFileDialog.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
-    <ClCompile Include="imgui\imnodes.cpp" />
+    <ClCompile Include="src\app\console.cpp" />
+    <ClCompile Include="src\app\filedialog.cpp" />
+    <ClCompile Include="src\app\gl3w.c" />
     <ClCompile Include="src\app\log.cpp" />
+    <ClCompile Include="src\app\menubar.cpp" />
+    <ClCompile Include="src\app\outliner.cpp" />
+    <ClCompile Include="src\app\renderview.cpp" />
+    <ClCompile Include="src\app\shelf.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\render\integrators.cpp" />
     <ClCompile Include="src\scene\camera.cpp" />
+    <ClCompile Include="src\scene\scene.cpp" />
     <ClCompile Include="src\scene\settings.cpp" />
     <ClCompile Include="src\scene\stats.cpp" />
     <ClCompile Include="src\shading\light.cpp" />
@@ -288,9 +313,11 @@
     <ClCompile Include="src\utils\file_utils.cpp" />
     <ClCompile Include="src\utils\maths_utils.cpp" />
     <ClCompile Include="src\utils\sampling_utils.cpp" />
+    <ClCompile Include="src\utils\windows_utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
+    <Text Include="src\CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
