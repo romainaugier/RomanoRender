@@ -24,6 +24,7 @@ class Light
 {
 public:
 	Light_Type type = Light_Type::Point;
+	std::string name;
 
 	virtual ~Light() {}
 
@@ -41,8 +42,9 @@ public:
 	float intensity;
 
 	Light_Type type = Light_Type::Point;
+	std::string name;
 
-	Point_Light() {}
+	Point_Light() { name = "Point Light"; }
 
 	Point_Light(vec3 position, float intensity, vec3 color) :
 		position(position),
@@ -66,8 +68,9 @@ public:
 	float angle;
 
 	Light_Type type = Light_Type::Distant;
+	std::string name;
 
-	Distant_Light() {}
+	Distant_Light() { name = "Distant Light"; }
 
 	Distant_Light(vec3 orientation, vec3 color, float intensity, float angle) : 
 		orientation(orientation),
@@ -93,8 +96,9 @@ public:
 	vec2 size = vec2(1.0f, 1.0f);
 
 	Light_Type type = Light_Type::Square;
+	std::string name;
 
-	Square_Light() {}
+	Square_Light() { name = "Square Light"; }
 
 	Square_Light(vec3 color, float intensity) :
 		color(color),
@@ -116,8 +120,9 @@ public:
 	bool visible = true;
 
 	Light_Type type = Light_Type::Dome;
+	std::string name;
 
-	Dome_Light() {}
+	Dome_Light() { name = "Dome Light"; }
 
 	Dome_Light(vec3 color, float intensity) :
 		color(color),

@@ -164,8 +164,7 @@ vec3 reflect(const vec3& i, const vec3& n)
 vec3 refract(vec3& i, vec3& n, float ior)
 {
     vec3 T(0.f);
-    vec3 n_t = n.normalize();
-    i = i.normalize();
+    vec3 n_t = n;
     float n1 = 1.0;
     float n2 = ior;
     bool in = true;

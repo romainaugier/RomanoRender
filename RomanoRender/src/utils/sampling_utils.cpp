@@ -2,13 +2,29 @@
 
 
 // sampling utils
-vec3 sample_ray_in_hemisphere(const vec3& hit_normal, const vec2& sample)
+vec3 sample_ray_in_hemisphere2(const vec3& hit_normal, const vec2& sample)
 {
     float a = 1.0f - 2.0f * sample.x;
     float b = sqrtf(1.0f - a * a);
     float phi = 2.0f * M_PI * sample.y;
 
     return vec3(hit_normal.x + b * cos(phi), hit_normal.y + b * sin(phi), hit_normal.z + a);
+}
+
+
+vec3 sample_ray_in_hemisphere(const vec3& hit_normal, const vec2& sample)
+{
+    float signZ = (hit_normal.z >= 0.0f) ? 1.0f : -1.0f;
+    float a = -1.0f / (signZ + hit_normal.z);
+    float b = hit_normal.x * hit_normal.y * a;
+    vec3 b1 = vec3(1.0f + signZ * hit_normal.x * hit_normal.x * a, signZ * b, -signZ * hit_normal.x);
+    vec3 b2 = vec3(b, signZ + hit_normal.y * hit_normal.y * a, -hit_normal.y);
+
+
+    float phi = 2.0f * M_PI * sample.x;
+    float cosTheta = sqrt(sample.y);
+    float sinTheta = sqrt(1.0f - sample.y);
+    return ((b1 * cosf(phi) + b2 * sinf(phi)) * cosTheta + hit_normal * sinTheta).normalize();
 }
 
 

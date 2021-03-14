@@ -58,7 +58,7 @@ vec3 Dome_Light::return_light_throughput(const float& d) const
 	return intensity * color;
 }
 
-vec3 Dome_Light::return_ray_direction(const vec3& hit_normal, const vec2& sample) const 
+vec3 Dome_Light::return_ray_direction(const vec3& hit_normal, const vec2& sample) const
 {
 	return sample_ray_in_hemisphere(hit_normal, sample);
 }
