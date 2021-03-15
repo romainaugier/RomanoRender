@@ -2,29 +2,7 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 
-#define IMGUI_IMPL_OPENGL_LOADER_GL3W
-
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>            // Initialize with gl3wInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-#include <GL/glew.h>            // Initialize with glewInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-#include <glad/glad.h>          // Initialize with gladLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
-#include <glad/gl.h>            // Initialize with gladLoadGL(...) or gladLoaderLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
-#define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
-#include <glbinding/Binding.h>  // Initialize with glbinding::Binding::initialize()
-#include <glbinding/gl/gl.h>
-using namespace gl;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
-#define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
-#include <glbinding/glbinding.h>// Initialize with glbinding::initialize()
-#include <glbinding/gl/gl.h>
-using namespace gl;
-#else
-#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
-#endif
 
 #include <GLFW/glfw3.h>
 
@@ -46,8 +24,8 @@ static void glfw_error_callback(int error, const char* description)
 #include "app/outliner.h"
 #include "app/menubar.h"
 #include "app/shelf.h"
+#include "app/renderview.h"
 #include "scene/scene.h"
-//#include "app/nodeeditor.h"
 #include "Tracy.hpp"
 #include "utils/utils.h"
 
@@ -73,13 +51,13 @@ int main(int, char**)
     initial_cam.name = "Default Camera";
     
     // initializing entities containers
-    std::vector<RTCGeometry> geometry;
+    std::vector<Object> objects;
     std::vector<Material> materials;
     std::vector<Light*> lights;
     std::vector<Camera> cameras;
 
-    cameras.push_back(initial_cam);
-    //lights.push_back(new Dome_Light(vec3(1.0f), 1.0f)); // this can be optional
+    cameras.push_back(initial_cam); // this can be optional, but it will be the Default Camera
+    //lights.push_back(new Dome_Light(vec3(1.0f), 1.0f)); // this too
 
     // loading sample sequences
     std::vector<std::vector<vec2>> sequence = load_sequences("D:/dev/Repos/Samples");
@@ -91,6 +69,7 @@ int main(int, char**)
     {
         pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 1));
     }
+
 
     // initializing embree device and scene
     settings.device = initializeDevice();
@@ -122,23 +101,8 @@ int main(int, char**)
     glfwSwapInterval(1); // Enable vsync
 
     // Initialize OpenGL loader
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
     bool err = gl3wInit() != 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-    bool err = glewInit() != GLEW_OK;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-    bool err = gladLoadGL() == 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
-    bool err = gladLoadGL(glfwGetProcAddress) == 0; // glad2 recommend using the windowing library loader instead of the (optionally) bundled one.
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
-    bool err = false;
-    glbinding::Binding::initialize();
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
-    bool err = false;
-    glbinding::initialize([](const char* name) { return (glbinding::ProcAddress)glfwGetProcAddress(name); });
-#else
-    bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader is likely to requires some form of initialization.
-#endif
+
     if (err)
     {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
@@ -155,7 +119,7 @@ int main(int, char**)
 
     // docking
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // style
     ImGuiStyle* style = &ImGui::GetStyle();
@@ -166,9 +130,9 @@ int main(int, char**)
     style->ChildBorderSize = 0.0f;
     style->PopupBorderSize = 0.0f;
     style->TabBorderSize = 0.0f;
-    style->WindowPadding = ImVec2(15, 15);
+    style->WindowPadding = ImVec2(8, 8);
     style->WindowRounding = 0.0f;
-    style->FramePadding = ImVec2(5, 5);
+    style->FramePadding = ImVec2(20, 1);
     style->FrameRounding = 0.0f;
     style->ItemSpacing = ImVec2(12, 8);
     style->ItemInnerSpacing = ImVec2(8, 6);
@@ -253,7 +217,9 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
 
-    int s = 1;
+    // variable for sample count
+    int sample_count = 1;
+    // variable for the height of the sample per frame
     int y = 0;
 
     int mat_id = 0;
@@ -267,22 +233,8 @@ int main(int, char**)
     bool render = false;
     bool save_window = false;
 
-    ImVec2 uv0(0, 0);
-    ImVec2 uv1((float)yres / 500.0f, (float)xres / 1000.0f);
-    float zoom = 1.0f;
-    
-    GLuint image_texture;
-    glGenTextures(1, &image_texture);
-    glBindTexture(GL_TEXTURE_2D, image_texture);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
-   
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // initializing gl texture for the renderview
+    Render_View_Utils render_view_utils(settings.xres, settings.yres, pixels, new_pixels);
 
     // declaring all the editors
     Console console;
@@ -291,6 +243,9 @@ int main(int, char**)
     Geometry_Shelf geo_shelf;
     Light_Shelf light_shelf;
     Camera_Shelf cam_shelf;
+    Render_View render_view;
+    Render_View_Buttons rview_buttons;
+    Save_Window rview_save_window;
 
     // initializing the file dialog texture methods
     file_dialog_init();
@@ -312,20 +267,22 @@ int main(int, char**)
         // draw the different windows
 
         // main menu bar
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 5.0f));
         menubar.draw();
+        ImGui::PopStyleVar();
 
         // geometry shelf
-        geo_shelf.draw(settings, geometry, materials, lights, cameras, console);
+        geo_shelf.draw(settings, objects, lights, cameras, console);
 
         // light shelf
-        light_shelf.draw(settings, geometry, materials, lights, cameras, console);
+        light_shelf.draw(settings, objects, lights, cameras, console);
 
         // cameras shelf
-        cam_shelf.draw(settings, geometry, materials, lights, cameras, console);
+        cam_shelf.draw(settings, objects, lights, cameras, console);
 
         if (change > 0 || edited)
         {
-            reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
+            reset_render(pixels, new_pixels, settings, sample_count, y);
             //change = 0;
             edited = false;
         }
@@ -346,13 +303,15 @@ int main(int, char**)
                 settings.xres = resolution[0];
                 settings.yres = resolution[1];
 
-                uv0 = ImVec2(0, 0);
-                uv1 = ImVec2((float)settings.yres / 500.0f, (float)settings.xres / 1000.0f);
+                render_view_utils.resolution.x = resolution[0];
+                render_view_utils.resolution.y = resolution[1];
+
+                render_view_utils.scrolling = ImVec2(0, 0);
 
                 cameras[0].aspect = (float)settings.xres / (float)settings.yres;
 
-                delete[] pixels;
-                delete[] new_pixels;
+                free(pixels);
+                free(new_pixels);
                 delete[] pixel_ids;
 
                 pixel_ids = new int[settings.xres * settings.yres];
@@ -366,13 +325,13 @@ int main(int, char**)
                 pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
                 new_pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
 
-                glBindTexture(GL_TEXTURE_2D, image_texture);
+                glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
 
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
 
                 glBindTexture(GL_TEXTURE_2D, 0);
 
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
+                reset_render(pixels, new_pixels, settings, sample_count, y);
 
                 change = false;
             }
@@ -381,16 +340,16 @@ int main(int, char**)
         }
 
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        // demo window for ImGui
         if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
-        // progressive render
+        // progressive render variables update
         previous_y = y;
 
 
-        if (render && s > 1)
+        if (render && sample_count > 1)
         {
-            progressive_render(s, pixel_ids, y, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
+            progressive_render(sample_count, pixel_ids, y, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
 #pragma omp parallel for
             for (int z = 0; z < settings.yres; z++)
@@ -399,9 +358,9 @@ int main(int, char**)
                 {
                     if (z <= y + 50)
                     {
-                        new_pixels[x + z * settings.xres].R = powf(pixels[x + z * settings.xres].R / s, 0.45f);
-                        new_pixels[x + z * settings.xres].G = powf(pixels[x + z * settings.xres].G / s, 0.45f);
-                        new_pixels[x + z * settings.xres].B = powf(pixels[x + z * settings.xres].B / s, 0.45f);
+                        new_pixels[x + z * settings.xres].R = powf(pixels[x + z * settings.xres].R / sample_count, 0.45f);
+                        new_pixels[x + z * settings.xres].G = powf(pixels[x + z * settings.xres].G / sample_count, 0.45f);
+                        new_pixels[x + z * settings.xres].B = powf(pixels[x + z * settings.xres].B / sample_count, 0.45f);
 
                         /*
                         pixels[x + y * settings.xres].R += powf((double)col.x, 0.45);
@@ -412,7 +371,7 @@ int main(int, char**)
                 }
             }
 
-            glBindTexture(GL_TEXTURE_2D, image_texture);
+            glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, new_pixels);
             glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -429,7 +388,7 @@ int main(int, char**)
 
             if (y == settings.yres)
             {
-                s++;
+                sample_count++;
 
                 //std::cout << y << "\n";
 
@@ -445,18 +404,18 @@ int main(int, char**)
         }
 
 
-        if (render && s < 2)
+        if (render && sample_count < 2)
         {
-            progressive_render_fast(s, pixel_ids, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
+            progressive_render_fast(sample_count, pixel_ids, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
 #pragma omp parallel for
             for (int z = 0; z < settings.yres; z++)
             {
                 for (int x = 0; x < settings.xres; x++)
                 {
-                    new_pixels[x + z * settings.xres].R = pixels[x + z * settings.xres].R / s;
-                    new_pixels[x + z * settings.xres].G = pixels[x + z * settings.xres].G / s;
-                    new_pixels[x + z * settings.xres].B = pixels[x + z * settings.xres].B / s;
+                    new_pixels[x + z * settings.xres].R = pixels[x + z * settings.xres].R / sample_count;
+                    new_pixels[x + z * settings.xres].G = pixels[x + z * settings.xres].G / sample_count;
+                    new_pixels[x + z * settings.xres].B = pixels[x + z * settings.xres].B / sample_count;
 
                     /*
                     pixels[x + y * settings.xres].R += powf((double)col.x, 0.45);
@@ -467,135 +426,28 @@ int main(int, char**)
                 }
             }
 
-            glBindTexture(GL_TEXTURE_2D, image_texture);
+            glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, new_pixels);
             glBindTexture(GL_TEXTURE_2D, 0);
 
-            s++;
+            sample_count++;
         }
 
 
         // render view
-        {
-            ImGui::Begin("RenderView");
-
-            ImVec2 scrolling(0.0f, 0.0f);
-
-            if (ImGui::Button("Start"))
-            {
-                render = true;
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Stop"))
-            {
-                render = false;
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Reset"))
-            {
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, s, y, render_avg);
-                uv0.x = 0.0f;
-                uv0.y = 0.0f;
-                uv1.x = settings.xres / 1000;
-                uv1.y = settings.yres / 500;
-                scrolling.x = 0.0f;
-                scrolling.y = 0.0f;
-                zoom = 1.0f;
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button("Save Image"))
-            {
-                save_window = true;
-            }
-
-            ImVec2 size(1000, 500);
-
-            ImVec2 origin(0.5f, 0.5f);
-
-            const ImVec4 tint(1.0f, 1.0f, 1.0f, 1.0f);
-            const ImVec4 border_color(0.0f, 0.0f, 0.0f, 1.0f);
-
-            ImGui::SetScrollY(0.0f);
-            ImGui::Image((void*)image_texture, size, uv0, uv1, tint, border_color);
-
-            const bool is_hovered = ImGui::IsItemHovered();
-            const bool is_active = ImGui::IsItemActive();
-
-            if (is_hovered && ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
-            {
-                scrolling.x += io.MouseDelta.x * 0.001;
-                scrolling.y += io.MouseDelta.y * 0.001;
-            }
-
-            const float mouse_wheel = io.MouseWheel;
-
-            if (is_hovered && mouse_wheel != 0.0f)
-            {
-                uv0.x += (mouse_wheel * (0.03f * (float)settings.yres / 500.0f));
-                uv0.y += (mouse_wheel * (0.03f * (float)settings.xres / 1000.0f));
-                uv1.x -= (mouse_wheel * (0.03f * (float)settings.yres / 500.0f));
-                uv1.y -= (mouse_wheel * (0.03f * (float)settings.xres / 1000.0f));
-                zoom -= (mouse_wheel * 0.03f);
-            }
-
-            float z = (zoom > 0.1f) ? zoom : 0.1;
-
-            uv0.x -= (scrolling.x * z);
-            uv1.x -= (scrolling.x * z);
-            uv0.y -= (scrolling.y * z);
-            uv1.y -= (scrolling.y * z);
-
-            ImGui::End();
-        }
+        rview_buttons.draw(render, render_view_utils, sample_count, y);
+        render_view.draw(render, render_view_utils, sample_count, y);
 
         // save window
-        if (save_window)
-        {
-            ImGui::Begin("Save Image", &save_window);
-
-            static char path[512] = "D:/image.exr";
-
-            ImGui::InputText("File Path", path, IM_ARRAYSIZE(path));
-
-            if (ImGui::Button("Save"))
-            {
-                color_t* out_pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
-
-                for (int z = 0; z < settings.yres; z++)
-                {
-                    for (int x = 0; x < settings.xres; x++)
-                    {
-                        out_pixels[x + z * settings.xres].R = pixels[x + z * settings.xres].R / s;
-                        out_pixels[x + z * settings.xres].G = pixels[x + z * settings.xres].G / s;
-                        out_pixels[x + z * settings.xres].B = pixels[x + z * settings.xres].B / s;    
-                    }
-                }
-
-                OIIO::ImageSpec spec(settings.xres, settings.yres, 3, OIIO::TypeDesc::FLOAT);
-                OIIO::ImageBuf buffer(spec, out_pixels);
-
-                buffer.write(path);
-
-                delete[] out_pixels;
-
-                save_window = false;
-            }
-
-            ImGui::End();
-
-        }
+        rview_save_window.draw(settings.xres, settings.yres, sample_count, new_pixels, save_window);
 
         // info window
         {
             ImGui::Begin("Infos");
 
-            render_1spp_time = render_avg / s;
+            render_1spp_time = render_avg / sample_count;
 
-            ImGui::Text("Rendered %i SPP", s);
+            ImGui::Text("Rendered %i SPP", sample_count);
             
             ImGui::End();
         }
@@ -619,6 +471,14 @@ int main(int, char**)
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
 
         glfwSwapBuffers(window);
     }

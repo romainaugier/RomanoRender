@@ -299,13 +299,34 @@ std::vector<RTCGeometry> LoadObject(RTCDevice& g_device, std::string path, Conso
 }
 */
 
-void LoadSingleObject(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device, std::vector<RTCGeometry>& geom, std::string& name);
+
+struct Object
+{
+    int id;
+    std::string name;
+    Material material;
+    RTCGeometry geometry;
+
+    Object() {}
+    Object(int id, std::string name, Material material, RTCGeometry geometry) :
+        id(id),
+        name(name),
+        material(material),
+        geometry(geometry)
+    {}
+};
 
 
-void LoadObject(RTCDevice& g_device, std::string path, std::vector<RTCGeometry>& geometry, std::vector<Material>& materials, Console& console);
+RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device);
 
 
-void SendToScene(RTCDevice& g_device, RTCScene& g_scene, std::vector<RTCGeometry> geometry, std::vector<Material>& scene_materials, std::vector<Material>& node_materials);
+void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& objects, Console& console);
+
+
+void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<RTCGeometry> geometry, std::vector<Material>& scene_materials, std::vector<Material>& node_materials);
+
+
+void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<RTCGeometry> geometry, std::vector<Material>& scene_materials, std::vector<Material>& node_materials);
 
 
 #endif

@@ -3,7 +3,7 @@
 
 #include "scene.h"
 
-void LoadSingleObject(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device, std::vector<RTCGeometry>& geom, std::string& name)
+RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device)
 {
     RTCGeometry geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
 
@@ -32,15 +32,12 @@ void LoadSingleObject(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDev
         //std::cout << triangles[i].v0 << "/" << triangles[i].v1 << "/" << triangles[i].v2 << "\n";
     }
 
-#pragma omp critical
-    {
-        geom.push_back(geo);
-        name = shape.name;
-    }
+
+    return geo;
 }
 
 
-void LoadObject(RTCDevice& g_device, std::string path, std::vector<RTCGeometry>& geometry, std::vector<Material>& materials, Console& console)
+void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& objects, Console& console)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -61,7 +58,7 @@ void LoadObject(RTCDevice& g_device, std::string path, std::vector<RTCGeometry>&
 #pragma omp parallel for
         for (int i = 0; i < shapes.size(); i++)
         {
-            LoadSingleObject(shapes[i], attrib, g_device, geometry, name);
+            RTCGeometry current_geometry = load_geometry(shapes[i], attrib, g_device);
 
             unsigned int m_id = i;
             Material new_mat(m_id);
@@ -69,7 +66,7 @@ void LoadObject(RTCDevice& g_device, std::string path, std::vector<RTCGeometry>&
 
 #pragma omp critical
             {
-                materials.push_back(new_mat);
+                objects.push_back(Object(m_id, name, new_mat, current_geometry));
             }
         }
 
@@ -83,18 +80,38 @@ void LoadObject(RTCDevice& g_device, std::string path, std::vector<RTCGeometry>&
 }
 
 
-void SendToScene(RTCDevice& g_device, RTCScene& g_scene, std::vector<RTCGeometry> geometry, std::vector<Material>& scene_materials, std::vector<Material>& object_materials)
+void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials)
 {
     int i = 0;
 
-    for (auto geo : geometry)
+    for (auto object : objects)
     {
-        rtcCommitGeometry(geo);
-        unsigned int geoID = rtcAttachGeometry(g_scene, geo);
+        rtcCommitGeometry(object.geometry);
+        unsigned int geoID = rtcAttachGeometry(g_scene, object.geometry);
         //rtcReleaseGeometry(geo);
 
-        object_materials[i].mat_id = geoID;
-        scene_materials.push_back(object_materials[i]);
+        scene_materials.push_back(object.material);
+
+        i++;
+    }
+
+    rtcCommitScene(g_scene);
+}
+
+
+void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials)
+{
+    rtcReleaseScene(g_scene);
+
+    int i = 0;
+
+    for (auto object : objects)
+    {
+        rtcCommitGeometry(object.geometry);
+        unsigned int geoID = rtcAttachGeometry(g_scene, object.geometry);
+        //rtcReleaseGeometry(geo);
+
+        scene_materials.push_back(object.material);
 
         i++;
     }

@@ -1,13 +1,13 @@
 #include "shelf.h"
 
 
-void Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& geometry, std::vector<Material>& materials, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
+void Shelf::draw(Render_Settings& settings, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
 {
 
 }
 
 
-void Geometry_Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& geometry, std::vector<Material>& materials, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
+void Geometry_Shelf::draw(Render_Settings& settings, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
 {
 	ImGui::Begin("Geometry");
 	{
@@ -24,8 +24,7 @@ void Geometry_Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& g
 				for (const auto& r : res)
 				{
 					std::vector<Material> mats;
-					LoadObject(settings.device, r.u8string(), geometry, mats, console);
-					SendToScene(settings.device, settings.scene, geometry, materials, mats);
+					load_object(settings.device, r.u8string(), objects, console);
 					printf("Open : %s\n", r.u8string().c_str());
 				}
 			}
@@ -55,7 +54,7 @@ void Geometry_Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& g
 }
 
 
-void Light_Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& geometry, std::vector<Material>& materials, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
+void Light_Shelf::draw(Render_Settings& settings, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
 {
 	ImGui::Begin("Light");
 	{
@@ -90,7 +89,7 @@ void Light_Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& geom
 }
 
 
-void Camera_Shelf::draw(Render_Settings& settings, std::vector<RTCGeometry>& geometry, std::vector<Material>& materials, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
+void Camera_Shelf::draw(Render_Settings& settings, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, Console& console)
 {
 	ImGui::Begin("Camera");
 	{
