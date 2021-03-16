@@ -3,6 +3,7 @@
 #include <random>
 #include "GLFW/glfw3.h"
 #include "matrix.h"
+#include "scene/settings.h"
 #include "vec2.h"
 #include "Tracy.hpp"
 
@@ -56,16 +57,16 @@ vec3 HableToneMap(vec3 color)
 */
 
 
-inline void reset_render(color_t* pixels, color_t* new_pixels, Render_Settings& settings, int& s, int& y)
+inline void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int& s, int& y)
 {
 #pragma omp parallel for
-    for (int y = 0; y < settings.yres; y++)
+    for (int y = 0; y < yres; y++)
     {
-        for (int x = 0; x < settings.xres; x++)
+        for (int x = 0; x < xres; x++)
         {
-            pixels[x + y * settings.xres].R = 0.0f;
-            pixels[x + y * settings.xres].G = 0.0f;
-            pixels[x + y * settings.xres].B = 0.0f;
+            pixels[x + y * xres].R = 0.0f;
+            pixels[x + y * xres].G = 0.0f;
+            pixels[x + y * xres].B = 0.0f;
         }
     }
     

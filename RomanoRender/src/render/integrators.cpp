@@ -86,30 +86,41 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                 Square_Light* sqlight = nullptr;
                 Dome_Light* domelight = nullptr;
 
-                vec3 area_sample_position(0.0f);
+                float distance = 10000.0f;
+                float area_shadow = 1.0f;
                 int hdri_id = 1;
 
                 vec3 ray_dir = light->return_ray_direction(hit_pos, sample);
 
-                Ray new_ray(hit_pos, ray_dir);
-
-                float distance = 10000.0f;
-                float area_shadow = 1.0f;
-
-                if (ptlight = dynamic_cast<Point_Light*>(light)) distance = dist(hit_pos, ptlight->position) - 0.001f;
-
-                else if (sqlight = dynamic_cast<Square_Light*>(light))
+                // point light
+                if (ptlight = dynamic_cast<Point_Light*>(light))
                 {
+                    ray_dir = ptlight->return_ray_direction(hit_pos, sample);
+                    distance = dist(hit_pos, ptlight->position) - 0.001f;
+                }
+
+                // distant light
+                else if (distlight = dynamic_cast<Distant_Light*>(light)) ray_dir = distlight->return_ray_direction(hit_pos, sample);
+
+                // dome light
+                else if (domelight = dynamic_cast<Dome_Light*>(light)) ray_dir = domelight->return_ray_direction(hit_pos, sample);
+
+                // square light
+                if (sqlight = dynamic_cast<Square_Light*>(light))
+                {
+                    ray_dir = sqlight->return_ray_direction(hit_pos, sample);
+
                     if (dot(ray_dir, sqlight->normal) > 0) continue;
                     else
                     {
                         vec3 pos = vec3(sqlight->transform_mat[4], sqlight->transform_mat[8], sqlight->transform_mat[12]);
-                        distance = dist(hit_pos, area_sample_position) - 0.001f;
+                        distance = dist(hit_pos, pos) - 0.001f;
                         float d = dot(sqlight->normal, ray_dir);
                         area_shadow = -d;
                     }
                 }
 
+                Ray new_ray(hit_pos, ray_dir);
                 float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
 
                 RTCRay shadow;
@@ -353,6 +364,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
 
     // background for dome lights
+    
     else
     {
         for (auto light : lights)
@@ -369,11 +381,12 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
                 else if (depth[0] >= 6 && !domelight->visible) return vec3(0.0f);
 
-                float d = 0.0f;
+                const float d = 0.0f;
                 return domelight->return_light_throughput(d);
             }
         }
     }
+    
 
 
     // nan filtering
@@ -565,7 +578,7 @@ void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sa
     {
         for (int x = 0; x < settings.xres; x++)
         {
-            if (generate_random_float_fast(x * z + 1) > 0.75f)
+            if (generate_random_float_fast(x * z + 1) > 0.5f)
             {
                 int id = ids[x + z * settings.xres];
                 render_p(s, sampler[id], pixels, x, z, settings, cam, mats, lights, samples, bounces, stat);

@@ -25,6 +25,7 @@ static void glfw_error_callback(int error, const char* description)
 #include "app/menubar.h"
 #include "app/shelf.h"
 #include "app/renderview.h"
+#include "app/editor.h"
 #include "scene/scene.h"
 #include "Tracy.hpp"
 #include "utils/utils.h"
@@ -246,12 +247,14 @@ int main(int, char**)
     Render_View render_view;
     Render_View_Buttons rview_buttons;
     Save_Window rview_save_window;
+    Editor editor;
 
     // initializing the file dialog texture methods
     file_dialog_init();
 
+    // declaring the edited variable to control the state of the renderer
     bool edited = false;
-    int change = 0;
+    int first_edit = 0;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -264,26 +267,16 @@ int main(int, char**)
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-        // draw the different windows
-
-        // main menu bar
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 5.0f));
-        menubar.draw();
-        ImGui::PopStyleVar();
-
-        // geometry shelf
-        geo_shelf.draw(settings, objects, lights, cameras, console);
-
-        // light shelf
-        light_shelf.draw(settings, objects, lights, cameras, console);
-
-        // cameras shelf
-        cam_shelf.draw(settings, objects, lights, cameras, console);
-
-        if (change > 0 || edited)
+        // if parameters have been edited, rebuild the scene and reset the frame buffer and the sample counter
+        if (render && edited)
         {
-            reset_render(pixels, new_pixels, settings, sample_count, y);
-            //change = 0;
+            if (first_edit == 1)
+            {
+                build_scene(settings.device, settings.scene, objects, materials);
+                first_edit = 2;
+            }
+            else if(first_edit > 1) rebuild_scene(settings.device, settings.scene, objects, materials);
+            reset_render(pixels, new_pixels, settings.xres, settings.yres, sample_count, y);
             edited = false;
         }
 
@@ -312,7 +305,7 @@ int main(int, char**)
 
                 free(pixels);
                 free(new_pixels);
-                delete[] pixel_ids;
+                free(pixel_ids);
 
                 pixel_ids = new int[settings.xres * settings.yres];
 
@@ -331,7 +324,7 @@ int main(int, char**)
 
                 glBindTexture(GL_TEXTURE_2D, 0);
 
-                reset_render(pixels, new_pixels, settings, sample_count, y);
+                reset_render(pixels, new_pixels, settings.xres, settings.yres, sample_count, y);
 
                 change = false;
             }
@@ -346,7 +339,7 @@ int main(int, char**)
         // progressive render variables update
         previous_y = y;
 
-
+        // Progressive rendering happens here
         if (render && sample_count > 1)
         {
             progressive_render(sample_count, pixel_ids, y, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
@@ -433,6 +426,22 @@ int main(int, char**)
             sample_count++;
         }
 
+        // draw the different windows
+
+        // main menu bar
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 5.0f));
+        menubar.draw();
+        ImGui::PopStyleVar();
+
+        // geometry shelf
+        geo_shelf.draw(settings, objects, lights, cameras, console, edited, first_edit);
+
+        // light shelf
+        light_shelf.draw(settings, objects, lights, cameras, console, edited, first_edit);
+
+        // cameras shelf
+        cam_shelf.draw(settings, objects, lights, cameras, console, edited, first_edit);
+
 
         // render view
         rview_buttons.draw(render, render_view_utils, sample_count, y);
@@ -457,14 +466,16 @@ int main(int, char**)
         console.Draw("Console", &o);
 
         // outliner
-        outliner.draw(cameras, lights, console);
+        outliner.draw(objects, cameras, lights, console);
+
+        // editor
+        editor.draw(outliner, objects, lights, cameras, edited);
 
         // Rendering
         ImGui::Render();
 
         
         int display_w, display_h;
-        change--;
 
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);

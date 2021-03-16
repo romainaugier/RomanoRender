@@ -7,6 +7,7 @@
 
 #include "utils/embree_utils.h"
 #include "utils/file_utils.h"
+#include "utils/matrix.h"
 #include "shading/material.h"
 #include "app/console.h"
 
@@ -306,27 +307,42 @@ struct Object
     std::string name;
     Material material;
     RTCGeometry geometry;
+    Vertex* orig_positions;
+    int vtx_count;
+    mat44 transformation_matrix;
+    vec3 translate, scale, rotate;
 
     Object() {}
-    Object(int id, std::string name, Material material, RTCGeometry geometry) :
+    Object(int id, std::string name, Material material, RTCGeometry geometry, Vertex* orig_pos, int count) :
         id(id),
         name(name),
         material(material),
-        geometry(geometry)
-    {}
+        geometry(geometry),
+        orig_positions(orig_pos),
+        vtx_count(count)
+    {
+        transformation_matrix = { 1.0f, 0.0f, 0.0f, 0.0f,
+                                  0.0f, 1.0f, 0.0f, 0.0f,
+                                  0.0f, 0.0f, 1.0f, 0.0f,
+                                  0.0f, 0.0f, 0.0f, 1.0f };
+
+        translate = vec3(0.0f); rotate = vec3(0.0f); scale = vec3(1.0f);
+    }
+
+    void set_transform();
 };
 
 
-RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device);
+RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device, std::string& name, int& size);
 
 
 void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& objects, Console& console);
 
 
-void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<RTCGeometry> geometry, std::vector<Material>& scene_materials, std::vector<Material>& node_materials);
+void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials);
 
 
-void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<RTCGeometry> geometry, std::vector<Material>& scene_materials, std::vector<Material>& node_materials);
+void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials);
 
 
 #endif
