@@ -2,6 +2,7 @@
 
 
 #include "vec3.h"
+#include "maths_utils.h"
 
 
 #ifndef MATRIX
@@ -48,23 +49,43 @@ inline void set_translation(mat44& m, const vec3& t)
 
 inline void set_rotation(mat44& m, const vec3& r)
 {
-    m[0] = cos(r.z) * cos(r.y); 
-    m[1] = cos(r.z) * sin(r.y) * sin(r.x) - sin(r.z) * cos(r.x);
-    m[2] = cos(r.z) * sin(r.y) * cos(r.z) + sin(r.z) * sin(r.x);
-    m[4] = sin(r.z) * cos(r.y);
-    m[5] = sin(r.z) * sin(r.y) * sin(r.x) + cos(r.z) * sin(r.x);
-    m[6] = sin(r.z) * sin(r.y) * cos(r.x) - cos(r.z) * sin(r.z);
-    m[8] = -sin(r.y);
-    m[9] = cos(r.y) * sin(r.z);
-    m[10] = cos(r.y) * cos(r.x);
+    /*
+    // rotate x
+    float sinTheta = sin(deg2rad(r.x));
+    float cosTheta = cos(deg2rad(r.x));
+
+    m[5] = cosTheta;
+    m[6] = -sinTheta;
+    m[8] = sinTheta;
+    m[9] = cosTheta;
+
+    
+    // rotate y
+    sinTheta = sin(deg2rad(r.y));
+    cosTheta = cos(deg2rad(r.y));
+
+    m[0] = cosTheta;
+    m[2] = sinTheta;
+    m[8] = -sinTheta;
+    m[10] = cosTheta;
+
+    // rotate z
+    sinTheta = sin(deg2rad(r.z));
+    cosTheta = cos(deg2rad(r.z));
+
+    m[0] = cosTheta;
+    m[1] = -sinTheta;
+    m[4] = sinTheta;
+    m[5] = cosTheta;
+    */
 }
 
 
 inline void set_scale(mat44& m, const vec3& s)
 {
-    m[0] *= s.x;
-    m[5] *= s.y;
-    m[10] *= s.z;
+    m[0] = s.x;
+    m[5] = s.y;
+    m[10] = s.z;
 }
 
 

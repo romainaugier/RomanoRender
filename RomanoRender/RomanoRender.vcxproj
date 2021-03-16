@@ -253,6 +253,7 @@
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="imgui\stb_image.h" />
     <ClInclude Include="src\app\console.h" />
+    <ClInclude Include="src\app\editor.h" />
     <ClInclude Include="src\app\filedialog.h" />
     <ClInclude Include="src\app\menubar.h" />
     <ClInclude Include="src\app\outliner.h" />
@@ -292,6 +293,7 @@
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\app\console.cpp" />
+    <ClCompile Include="src\app\editor.cpp" />
     <ClCompile Include="src\app\filedialog.cpp" />
     <ClCompile Include="src\app\gl3w.c" />
     <ClCompile Include="src\app\log.cpp" />

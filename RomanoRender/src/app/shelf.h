@@ -20,7 +20,7 @@ struct Shelf
 	virtual void draw(Render_Settings& settings, 
 					  std::vector<Object>& objects, 
 					  std::vector<Light*>& lights, 
-					  std::vector<Camera>& cameras, Console& console);
+					  std::vector<Camera>& cameras, Console& console, bool& change, int& edit);
 };
 
 
@@ -31,7 +31,7 @@ struct Geometry_Shelf : public Shelf
 	void draw(Render_Settings& settings,
 			  std::vector<Object>& objects,
 			  std::vector<Light*>& lights, 
-			  std::vector<Camera>& cameras, Console& console) override;
+			  std::vector<Camera>& cameras, Console& console, bool& change, int& edit) override;
 };
 
 
@@ -42,7 +42,7 @@ struct Light_Shelf : public Shelf
 	void draw(Render_Settings& settings,
 			  std::vector<Object>& objects, 
 			  std::vector<Light*>& lights, 
-			  std::vector<Camera>& cameras, Console& console) override;
+			  std::vector<Camera>& cameras, Console& console, bool& change, int& edit) override;
 };
 
 
@@ -53,7 +53,7 @@ struct Camera_Shelf : public Shelf
 	void draw(Render_Settings& settings,
 			  std::vector<Object>& objects,
 			  std::vector<Light*>& lights, 
-			  std::vector<Camera>& cameras, Console& console) override;
+			  std::vector<Camera>& cameras, Console& console, bool& change, int& edit) override;
 };
 
 #endif // !SHELF

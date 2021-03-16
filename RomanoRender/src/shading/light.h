@@ -28,8 +28,8 @@ public:
 
 	virtual ~Light() {}
 
-	virtual vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) const = 0;
-	virtual vec3 return_light_throughput(const float& d) const = 0;
+	virtual vec3 return_ray_direction(const vec3& hit_position, const vec2& sample);
+	virtual vec3 return_light_throughput(const float& d);
 };
 
 
@@ -52,9 +52,9 @@ public:
 		color(color)
 	{}
 
-	vec3 return_light_throughput(const float& d) const override;
+	vec3 return_light_throughput(const float& d) override;
 
-	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample = vec2(0.0f)) const override;
+	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample = vec2(0.0f)) override;
 };
 
 
@@ -79,9 +79,9 @@ public:
 		angle(angle)
 	{}
 
-	vec3 return_light_throughput(const float& d = 0.0f) const override;
+	vec3 return_light_throughput(const float& d = 0.0f) override;
 
-	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) const override;
+	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) override;
 };
 
 
@@ -105,9 +105,9 @@ public:
 		intensity(intensity)
 	{}
 
-	vec3 return_light_throughput(const float& d) const override;
+	vec3 return_light_throughput(const float& d) override;
 
-	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) const override;
+	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) override;
 };
 
 
@@ -129,11 +129,11 @@ public:
 		intensity(intensity)
 	{}
 
-	vec3 return_light_throughput(const float& d = 0.0f) const override;
+	vec3 return_light_throughput(const float& d = 0.0f) override;
 
-	vec3 return_ray_direction(const vec3& hit_normal, const vec2& sample) const override;
+	vec3 return_ray_direction(const vec3& hit_normal, const vec2& sample) override;
 
-	vec3 return_hdri_background() const;
+	vec3 return_hdri_background();
 };
 
 
