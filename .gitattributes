@@ -7,4 +7,4 @@
 *.tex linguist-detectable=false
 *.bib linguist-detectable=false
 *.hlsl linguist-detectable=false
-*.make linguist-detectable=false
+*.makefile linguist-detectable=false
