@@ -24,13 +24,14 @@ enum class Selection_Type
 struct Outliner
 {
 	int selected = 0;
+	int type_selected = 0;
 	Selection_Type selection_type;
 
 	Outliner() {}
 
 	~Outliner() {}
 
-	void draw(std::vector<Object>& objects, std::vector<Camera>& cameras, std::vector<Light*>& lights, Console& console);
+	void draw(std::vector<Object>& objects, std::vector<Camera>& cameras, std::vector<Light*>& lights, Console& console, bool& edited);
 };
 
 

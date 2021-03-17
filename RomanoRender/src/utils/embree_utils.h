@@ -7,8 +7,8 @@
 #define EMBREE_UTILS
 
 
-struct alignas(16) Vertex { float x, y, z, a; };
-struct Triangle { int v0, v1, v2; };
+struct alignas(16) rVertex { float x, y, z; };
+struct alignas(32) Triangle { unsigned int v0, v1, v2; };
 
 
 void errorFunction(void* userPtr, enum RTCError error, const char* str);

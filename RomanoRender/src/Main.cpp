@@ -58,6 +58,7 @@ int main(int, char**)
     std::vector<Camera> cameras;
 
     cameras.push_back(initial_cam); // this can be optional, but it will be the Default Camera
+    initial_cam.~Camera();
     //lights.push_back(new Dome_Light(vec3(1.0f), 1.0f)); // this too
 
     // loading sample sequences
@@ -466,7 +467,7 @@ int main(int, char**)
         console.Draw("Console", &o);
 
         // outliner
-        outliner.draw(objects, cameras, lights, console);
+        outliner.draw(objects, cameras, lights, console, edited);
 
         // editor
         editor.draw(outliner, objects, lights, cameras, edited);

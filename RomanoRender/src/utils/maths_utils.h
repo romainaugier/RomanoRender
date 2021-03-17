@@ -70,7 +70,7 @@ vec3 tangentToWorld(const vec3& hit_normal, const vec3& tangent, const vec3& bit
 // schlick/fresnels functions
 vec3 schlick_weight(const vec3& f0, const float& h);
 float schlick_r0_from_relative_ior(const float eta);
-float fresnel_reflection_coef(float& n2, vec3& normal, vec3& incident);
+float fresnel_reflection_coef(const float n2, const vec3& normal, const vec3& incident);
 
 
 // approx functions

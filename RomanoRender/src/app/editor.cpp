@@ -9,7 +9,7 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 	{
 		ImGui::BeginChild("Geometry");
 		// shortcut
-		int s = outliner.selected;
+		int s = outliner.type_selected;
 
 		ImGui::Text("Geometry : %s", objects[s].name.c_str());
 
@@ -32,7 +32,7 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 		ImGui::BeginChild("Camera");
 
 		// shortcut
-		int s = outliner.selected;
+		int s = outliner.type_selected;
 
 		ImGui::Text("Camera : %s", cameras[s].name.c_str());
 
@@ -59,7 +59,7 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 	{
 		ImGui::BeginChild("Light");
 		// shortcut
-		int s = outliner.selected;
+		int s = outliner.type_selected;
 
 		ImGui::Text("Light : %s", lights[s]->name.c_str());
 
