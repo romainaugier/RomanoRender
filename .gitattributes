@@ -3,6 +3,7 @@
 *.cxx linguist-language=c++
 *.h linguist-language=C++
 *.hpp linguist-language=C++
+
 *.txt linguist-language=Makefile
 
 *.tex linguist-detectable=false
