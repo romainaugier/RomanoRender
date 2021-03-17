@@ -1,2 +1,7 @@
 *.h linguist-language=C++
 *.hpp linguist-language=C++
+
+*.tex linguist-detectable=false
+*.bib linguist-detectable=false
+*.hlsl linguist-detectable=false
+*.make linguist-detectable=false
