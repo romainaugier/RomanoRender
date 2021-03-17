@@ -4,8 +4,6 @@
 *.h linguist-language=C++
 *.hpp linguist-language=C++
 
-*.txt linguist-language=CMake
-
 *.tex linguist-detectable=false
 *.bib linguist-detectable=false
 *.hlsl linguist-detectable=false
