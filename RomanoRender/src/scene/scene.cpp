@@ -10,7 +10,7 @@ void Object::set_transform()
     set_rotation(transformation_matrix, rotate);
     set_scale(transformation_matrix, scale);
 
-    Vertex* vertices = (Vertex*)rtcGetGeometryBufferData(geometry, RTC_BUFFER_TYPE_VERTEX, 0);
+    rVertex* vertices = (rVertex*)rtcGetGeometryBufferData(geometry, RTC_BUFFER_TYPE_VERTEX, 0);
 
     for(int i = 0; i < vtx_count; i++)
     {
@@ -27,42 +27,65 @@ void Object::set_transform()
 }
 
 
-RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device, std::string& name, Vertex* orig, int& size)
+void Object::release()
+{
+    // make sure we free the original position pointer to avoid memory leaks
+    free(orig_positions);
+    orig_positions = NULL;
+
+    // release the embree geometry 
+    rtcReleaseGeometry(geometry);
+}
+
+
+RTCGeometry load_geometry(objl::Mesh& object, RTCDevice& g_device, std::string& name, rVertex* orig, int& size)
 {
     RTCGeometry geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
 
-    // here we create 2 geometry buffer, one to store the original position, and one to store the transformed position
-    Vertex* vertices = (Vertex*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(Vertex), attrib.vertices.size());
+    rVertex* vertices = (rVertex*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(rVertex), object.Vertices.size());
 
-    Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), shape.mesh.indices.size() / 3);
-
-    int id = 0;
-
-    for (auto i = 0; i < attrib.vertices.size(); i += 3)
+    for (int i = 0; i < object.Vertices.size(); i++)
     {
-        vertices[id].x = attrib.vertices[i];
-        vertices[id].y = attrib.vertices[i + 1];
-        vertices[id].z = attrib.vertices[i + 2];
+        vertices[i].x = object.Vertices[i].Position.X;
+        vertices[i].y = object.Vertices[i].Position.Y;
+        vertices[i].z = object.Vertices[i].Position.Z;
 
-        orig[id].x = attrib.vertices[i];
-        orig[id].y = attrib.vertices[i + 1];
-        orig[id].z = attrib.vertices[i + 2];
-
-        //std::cout << vertices[id].x << "/" << vertices[id].y << "/" << vertices[id].z << "\n";
-        id++;
+        orig[i].x = object.Vertices[i].Position.X;
+        orig[i].y = object.Vertices[i].Position.Y;
+        orig[i].z = object.Vertices[i].Position.Z;
     }
 
-    for (auto i = 0; i < shape.mesh.indices.size() / 3; i++)
-    {
-        triangles[i].v0 = shape.mesh.indices[i * 3].vertex_index;
-        triangles[i].v1 = shape.mesh.indices[i * 3 + 1].vertex_index;
-        triangles[i].v2 = shape.mesh.indices[i * 3 + 2].vertex_index;
+    rVertex* normals = new rVertex[object.Vertices.size()];
 
-        //std::cout << triangles[i].v0 << "/" << triangles[i].v1 << "/" << triangles[i].v2 << "\n";
+    for (int i = 0; i < object.Vertices.size(); i++)
+    {
+        normals[i].x = object.Vertices[i].Normal.X;
+        normals[i].y = object.Vertices[i].Normal.Y;
+        normals[i].z = object.Vertices[i].Normal.Z;
     }
 
-    name = shape.name;
-    size = attrib.vertices.size();
+
+    rtcSetGeometryVertexAttributeCount(geo, 1);
+    rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT3, normals, 0, sizeof(rVertex), object.Vertices.size());
+
+    Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), object.Indices.size() / 3);
+
+    int tri = 0;
+
+    for (int i = 0; i < object.Indices.size(); i += 3)
+    {
+        triangles[tri].v0 = object.Indices[i];
+        triangles[tri].v1 = object.Indices[i + 1];
+        triangles[tri].v2 = object.Indices[i + 2];
+
+
+        tri++;
+    }
+
+
+    name = object.MeshName;
+    size = object.Vertices.size();
+    
 
     return geo;
 }
@@ -70,34 +93,37 @@ RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RT
 
 void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& objects, Console& console)
 {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> tiny_obj_mats;
+    objl::Loader loader;
+    
+    bool ret = loader.LoadFile(path);
 
-    std::string warn;
-    std::string err;
-
-    std::string base_dir = get_base_dir(path);
-
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &tiny_obj_mats, &warn, &err, path.c_str(), base_dir.c_str(), true);
-
+    
 
     if (ret)
     {
         std::string name;
 
-#pragma omp parallel for
-        for (int i = 0; i < shapes.size(); i++)
+        int i = 0;
+
+//#pragma omp parallel for
+
+        for (auto& object : loader.LoadedMeshes)
         {
             int vtx_number;
-            Vertex* orig = (Vertex*)malloc(sizeof(Vertex) * attrib.vertices.size());
-            RTCGeometry current_geometry = load_geometry(shapes[i], attrib, g_device, name, orig, vtx_number);
+
+            // here we create a custom buffer to store the original vertices positions to be able to apply transform on it 
+            // this buffer gets freed with the Object::release() method
+            rVertex* orig = (rVertex*)malloc(sizeof(rVertex) * object.Vertices.size());
+
+            RTCGeometry current_geometry = load_geometry(object, g_device, name, orig, vtx_number);
 
             unsigned int m_id = i;
+            i++;
+
             Material new_mat(m_id);
             new_mat.name = name;
 
-#pragma omp critical
+//#pragma omp critical
             {
                 objects.push_back(Object(m_id, name, new_mat, current_geometry, orig, vtx_number));
             }
@@ -107,7 +133,7 @@ void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& obj
     }
     else
     {
-        console.AddLog("[ERROR] : Could not load file : %s%s", warn.c_str(), err.c_str());
+        console.AddLog("[ERROR] : Could not load file !");
     }
 
 }

@@ -15,7 +15,7 @@ struct alignas(16) vec3
 	vec3(float X, float Y, float Z) : x(X), y(Y), z(Z) {}
 	vec3(float t) : x(t), y(t), z(t) {}
 
-	vec3 operator-() { return vec3(-x, -y, -z); }
+	const vec3 operator-() const { return vec3(-x, -y, -z); }
 
 	const float& operator [] (int i) const { return (&x)[i]; }
 	float& operator [] (int i) { return (&x)[i]; }

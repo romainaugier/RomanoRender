@@ -6,8 +6,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 {
 
     //const float random_float = generate_random_float();
-    __int64 seed = s + samples[0];
-    const float random_float = generate_random_float_fast(seed);
+    const float random_float = generate_random_float_fast(s + samples[0]);
     const int sampler_id = (int)(random_float * (sampler.size() - 1));
     const vec2 sample = sampler[sampler_id];
 
@@ -50,21 +49,21 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
         new_color = mats[hit_mat_id].clr;
 
-        float hit_diff_roughness = mats[hit_mat_id].diffuse_roughness;
-        float hit_roughness = std::max(0.005f, mats[hit_mat_id].roughness);
-        float hit_refraction = mats[hit_mat_id].refraction;
-        float hit_metallic = mats[hit_mat_id].metallic;
-        float hit_specular = mats[hit_mat_id].specular;
-        float hit_reflectance = mats[hit_mat_id].reflectance;
-        float hit_sss = mats[hit_mat_id].sss;
+        const float hit_diff_roughness = mats[hit_mat_id].diffuse_roughness;
+        const float hit_roughness = std::max(0.005f, mats[hit_mat_id].roughness);
+        const float hit_refraction = mats[hit_mat_id].refraction;
+        const float hit_metallic = mats[hit_mat_id].metallic;
+        const float hit_specular = mats[hit_mat_id].specular;
+        const float hit_reflectance = mats[hit_mat_id].reflectance;
+        const float hit_sss = mats[hit_mat_id].sss;
 
-        vec3 hit_specular_color = mats[hit_mat_id].specular_color;
-        vec3 hit_ior = mats[hit_mat_id].ior;
-        vec3 hit_refl_color = mats[hit_mat_id].reflection_color;
-        vec3 hit_sss_color = mats[hit_mat_id].sss_color;
+        const vec3 hit_specular_color = mats[hit_mat_id].specular_color;
+        const vec3 hit_ior = mats[hit_mat_id].ior;
+        const vec3 hit_refl_color = mats[hit_mat_id].reflection_color;
+        const vec3 hit_sss_color = mats[hit_mat_id].sss_color;
 
-        vec3 hit_normal = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z).normalize();
-        vec3 hit_pos = vec3(rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z) + rayhit.ray.tfar * vec3(rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z);
+        const vec3 hit_normal = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z).normalize();
+        const vec3 hit_pos = vec3(rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z) + rayhit.ray.tfar * vec3(rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z);
 
         vec3 kd(1.0f);
         vec3 ks(0.5f);
@@ -121,7 +120,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                 }
 
                 Ray new_ray(hit_pos, ray_dir);
-                float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
+                const float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
 
                 RTCRay shadow;
                 shadow.org_x = new_ray.origin().x;
@@ -144,14 +143,14 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
                     if (hit_specular > 0.0f)
                     {
-                        vec3 H = (ray_dir + -r.direction()).normalize();
-                        float NdotH = Saturate(dot(hit_normal, H));
-                        float LdotH = Saturate(dot(ray_dir, H));
-                        float NdotV = Saturate(dot(hit_normal, -r.direction()));
+                        const vec3 H = (ray_dir + -r.direction()).normalize();
+                        const float NdotH = Saturate(dot(hit_normal, H));
+                        const float LdotH = Saturate(dot(ray_dir, H));
+                        const float NdotV = Saturate(dot(hit_normal, -r.direction()));
 
-                        float D = ggx_normal_distribution(NdotH, hit_roughness);
-                        float G = schlick_masking_term(NdotL, NdotV, hit_roughness);
-                        vec3 F = schlick_fresnel(hit_ior, LdotH);
+                        const float D = ggx_normal_distribution(NdotH, hit_roughness);
+                        const float G = schlick_masking_term(NdotL, NdotV, hit_roughness);
+                        const vec3 F = schlick_fresnel(hit_ior, LdotH);
 
                         ggx += (D * G * F / (4 * std::max(0.001f, NdotV)));
                         
@@ -238,7 +237,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                     break;
                 }
 
-                float random = generate_random_float_fast(seed * i);
+                float random = generate_random_float_fast(s + samples[0]);
                 step_size = (random * 2) * scale / i;
 
                 position += direction * step_size;

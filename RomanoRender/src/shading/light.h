@@ -23,13 +23,12 @@ enum class Light_Type
 class Light
 {
 public:
-	Light_Type type = Light_Type::Point;
 	std::string name;
 
 	virtual ~Light() {}
 
-	virtual vec3 return_ray_direction(const vec3& hit_position, const vec2& sample);
-	virtual vec3 return_light_throughput(const float& d);
+	virtual vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) = 0;
+	virtual vec3 return_light_throughput(const float& d) = 0;
 };
 
 
@@ -40,9 +39,6 @@ public:
 	vec3 position;
 	vec3 color;
 	float intensity;
-
-	Light_Type type = Light_Type::Point;
-	std::string name;
 
 	Point_Light() { name = "Point Light"; }
 
@@ -66,9 +62,6 @@ public:
 	vec3 color;
 	float intensity;
 	float angle;
-
-	Light_Type type = Light_Type::Distant;
-	std::string name;
 
 	Distant_Light() { name = "Distant Light"; }
 
@@ -95,9 +88,6 @@ public:
 	mat44 transform_mat = mat44();
 	vec2 size = vec2(1.0f, 1.0f);
 
-	Light_Type type = Light_Type::Square;
-	std::string name;
-
 	Square_Light() { name = "Square Light"; }
 
 	Square_Light(vec3 color, float intensity) :
@@ -118,9 +108,6 @@ public:
 	vec3 color = vec3(1.0f);
 	float intensity = 1.0f;
 	bool visible = true;
-
-	Light_Type type = Light_Type::Dome;
-	std::string name;
 
 	Dome_Light() { name = "Dome Light"; }
 

@@ -1,13 +1,6 @@
 #include "light.h"
 
 
-vec3 Light::return_ray_direction(const vec3& hit_position, const vec2& sample) { return vec3(0.0f); }
-
-
-vec3 Light::return_light_throughput(const float& d) { return vec3(0.0f); }
-
-
-
 // point light functions
 vec3 Point_Light::return_light_throughput(const float& d)
 {

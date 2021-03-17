@@ -13,7 +13,7 @@
 
 #include "tinyobjl.h"
 
-//#include "objloader.h"
+#include "objloader.h"
 
 
 #ifndef SCENE
@@ -307,13 +307,13 @@ struct Object
     std::string name;
     Material material;
     RTCGeometry geometry;
-    Vertex* orig_positions;
+    rVertex* orig_positions;
     int vtx_count;
     mat44 transformation_matrix;
     vec3 translate, scale, rotate;
 
     Object() {}
-    Object(int id, std::string name, Material material, RTCGeometry geometry, Vertex* orig_pos, int count) :
+    Object(int id, std::string name, Material material, RTCGeometry geometry, rVertex* orig_pos, int count) :
         id(id),
         name(name),
         material(material),
@@ -330,6 +330,8 @@ struct Object
     }
 
     void set_transform();
+
+    void release();
 };
 
 
