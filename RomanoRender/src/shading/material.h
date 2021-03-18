@@ -15,7 +15,8 @@ public:
         mat_id(id)
     {
         //name = "material_" + std::to_string(id);
-        clr = vec3(0.3f);
+        diffuse_color = vec3(0.3f);
+        diffuse_weight = 1.0f;
         roughness = 1.0f;
         refraction = 0.0f;
         islight = false;
@@ -36,7 +37,7 @@ public:
     }
 
     Material(unsigned int& id, vec3 color_parm, vec3 n, bool is_light) :
-        clr(color_parm),
+        diffuse_color(color_parm),
         normal(n),
         islight(is_light)
     {        
@@ -44,11 +45,12 @@ public:
 
     Material(int& id, std::string _name, vec3 color_parm, float _roughness, float _refrac) :
         name(_name),
-        clr(color_parm),
+        diffuse_color(color_parm),
         roughness(_roughness),
         refraction(_refrac)
     {
         diffuse_roughness = 0.0f;
+        diffuse_weight = 1.0f;
         specular = 0.0f;
         reflectance = 0.0f;
         metallic = 0.0f;
@@ -71,7 +73,8 @@ public:
     bool islight;
     vec3 normal;
 
-    vec3 clr;
+    vec3 diffuse_color;
+    float diffuse_weight;
     float diffuse_roughness;
 
     float roughness;

@@ -257,6 +257,7 @@
     <ClInclude Include="src\app\filedialog.h" />
     <ClInclude Include="src\app\menubar.h" />
     <ClInclude Include="src\app\outliner.h" />
+    <ClInclude Include="src\app\rendersettings.h" />
     <ClInclude Include="src\app\renderview.h" />
     <ClInclude Include="src\app\shelf.h" />
     <ClInclude Include="src\maths\maths.h" />
@@ -299,6 +300,7 @@
     <ClCompile Include="src\app\log.cpp" />
     <ClCompile Include="src\app\menubar.cpp" />
     <ClCompile Include="src\app\outliner.cpp" />
+    <ClCompile Include="src\app\rendersettings.cpp" />
     <ClCompile Include="src\app\renderview.cpp" />
     <ClCompile Include="src\app\shelf.cpp" />
     <ClCompile Include="src\Main.cpp" />

@@ -82,7 +82,7 @@ float inv_sqrt(float number);
 
 // pathtracing utils functions
 vec3 reflect(const vec3& i, const vec3& n);
-vec3 refract(vec3& i, vec3& n, float ior);
+vec3 refract(const vec3 i, const vec3& n, const float ior);
 vec3 face_forward(const vec3& dir, const vec3& _Ng);
 
 #endif

@@ -135,6 +135,9 @@
     <ClInclude Include="src\app\editor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\app\rendersettings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp">
@@ -231,6 +234,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\app\editor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\rendersettings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

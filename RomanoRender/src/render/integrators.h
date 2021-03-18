@@ -19,8 +19,12 @@
 #define RENDER
 
 
-// ray cast function used to render. Return a vec3 color
+// pathtracing integrator. Return a vec3 color
 vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::vector<Material>& mats, Render_Settings& settings, std::vector<Light*>& lights, int depth[], std::vector<int>& light_path, int samples[], Stats& stat);
+
+
+// ao integrator
+vec3 ambient_occlusion(int s, std::vector<vec2>& sampler, const Ray& r, Render_Settings& settings);
 
 
 // funtion used to render a single pixel, used for progressive rendering

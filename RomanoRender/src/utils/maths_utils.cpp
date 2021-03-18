@@ -161,7 +161,7 @@ vec3 reflect(const vec3& i, const vec3& n)
 }
 
 
-vec3 refract(vec3& i, vec3& n, float ior)
+vec3 refract(const vec3 i, const vec3& n, const float ior)
 {
     vec3 T(0.f);
     vec3 n_t = n;

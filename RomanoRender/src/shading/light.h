@@ -24,6 +24,8 @@ class Light
 {
 public:
 	std::string name;
+	vec3 color = vec3(1.0f);
+	float intensity = 1.0f;
 
 	virtual ~Light() {}
 
@@ -36,17 +38,16 @@ public:
 class Point_Light : public Light
 {
 public:
-	vec3 position;
-	vec3 color;
-	float intensity;
+	vec3 position = vec3(0.0f);
 
 	Point_Light() { name = "Point Light"; }
 
-	Point_Light(vec3 position, float intensity, vec3 color) :
-		position(position),
-		intensity(intensity),
-		color(color)
-	{}
+	Point_Light(vec3 position, float _intensity, vec3 _color) :
+		position(position)
+	{
+		color = _color;
+		intensity = _intensity;
+	}
 
 	vec3 return_light_throughput(const float& d) override;
 
@@ -58,19 +59,18 @@ public:
 class Distant_Light : public Light
 {
 public:
-	vec3 orientation;
-	vec3 color;
-	float intensity;
-	float angle;
+	vec3 orientation = vec3(0.0f, 0.0f, 1.0f);
+	float angle = 1.0f;
 
 	Distant_Light() { name = "Distant Light"; }
 
-	Distant_Light(vec3 orientation, vec3 color, float intensity, float angle) : 
+	Distant_Light(vec3 orientation, vec3 _color, float _intensity, float angle) : 
 		orientation(orientation),
-		color(color),
-		intensity(intensity),
 		angle(angle)
-	{}
+	{
+		color = _color;
+		intensity = _intensity;
+	}
 
 	vec3 return_light_throughput(const float& d = 0.0f) override;
 
@@ -82,22 +82,25 @@ public:
 class Square_Light : public Light
 {
 public:
-	vec3 color = vec3(1.0f);
-	float intensity = 1.0f;
-	vec3 normal;
+	vec3 normal = vec3(0.0f, 0.0f, 1.0f);
+	vec3 translate = vec3(0.0f);
+	vec3 rotate = vec3(0.0f);
 	mat44 transform_mat = mat44();
 	vec2 size = vec2(1.0f, 1.0f);
 
 	Square_Light() { name = "Square Light"; }
 
-	Square_Light(vec3 color, float intensity) :
-		color(color),
-		intensity(intensity)
-	{}
+	Square_Light(vec3 _color, float _intensity)
+	{
+		color = _color;
+		intensity = _intensity;
+	}
 
 	vec3 return_light_throughput(const float& d) override;
 
 	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) override;
+
+	void set_transform();
 };
 
 
@@ -105,16 +108,15 @@ public:
 class Dome_Light : public Light
 {
 public:
-	vec3 color = vec3(1.0f);
-	float intensity = 1.0f;
 	bool visible = true;
 
 	Dome_Light() { name = "Dome Light"; }
 
-	Dome_Light(vec3 color, float intensity) :
-		color(color),
-		intensity(intensity)
-	{}
+	Dome_Light(vec3 _color, float _intensity)
+	{
+		color = _color;
+		intensity = _intensity;
+	}
 
 	vec3 return_light_throughput(const float& d = 0.0f) override;
 

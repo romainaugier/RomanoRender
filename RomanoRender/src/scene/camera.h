@@ -5,6 +5,7 @@
 #include "utils/ray.h"
 #include "utils/vec3.h"
 #include "utils/maths_utils.h"
+#include "utils/matrix.h"
 
 
 #ifndef CAMERA
@@ -17,7 +18,7 @@ public:
 
 	Camera(vec3 _pos, vec3 _lookat, float focal, int xres, int yres, float aper, float focusdist, float anx, float any) :
 		pos(_pos),
-		lookat(_lookat),
+		rotation(_lookat),
 		focal_length(focal),
 		aspect((float)xres / (float)yres),
 		aperture(aper),
@@ -25,6 +26,7 @@ public:
 		anamorphic_x(anx),
 		anamorphic_y(any)
 	{
+		transformation_matrix = mat44();
 		vec3 u, v, w;
 		vec3 up(0.0f, 1.0f, 0.0f);
 
@@ -36,7 +38,7 @@ public:
 
 		origin = pos;
 		
-		vec3 w_(pos - lookat);
+		vec3 w_(pos - rotation);
 		w = w_.normalize();
 		u = cross(w, up).normalize();
 		v = cross(w, u);
@@ -51,12 +53,16 @@ public:
 
 	void update(int& xres, int& yres);
 
+	void set_transform();
+
 public:
 	vec3 origin;
 	vec3 lower_left_corner;
 	vec3 h, v;
 	vec3 pos;
-	vec3 lookat;
+	vec3 rotation;
+
+	mat44 transformation_matrix;
 
 	float focal_length;
 	float fov;

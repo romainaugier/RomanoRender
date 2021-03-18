@@ -5,7 +5,6 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
 {
 	ImGui::Begin("Outliner");
 	{
-
         int objects_count = 0;
         int total_count = 0;
 
@@ -97,6 +96,8 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
         if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
             ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
         {
+            edited = true;
+
             if (selection_type == Selection_Type::SelectionType_Object)
             {   
                 // shortcut : s = type_selected variable
@@ -121,6 +122,8 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
 
                 // free the memory to avoid mem leaks
                 delete lights[s];
+
+                lights.erase(lights.begin() + s);
             }
         }
 	}

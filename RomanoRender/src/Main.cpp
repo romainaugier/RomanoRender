@@ -26,6 +26,7 @@ static void glfw_error_callback(int error, const char* description)
 #include "app/shelf.h"
 #include "app/renderview.h"
 #include "app/editor.h"
+#include "app/rendersettings.h"
 #include "scene/scene.h"
 #include "Tracy.hpp"
 #include "utils/utils.h"
@@ -249,6 +250,7 @@ int main(int, char**)
     Render_View_Buttons rview_buttons;
     Save_Window rview_save_window;
     Editor editor;
+    Render_Settings_Window rsettings_windows;
 
     // initializing the file dialog texture methods
     file_dialog_init();
@@ -283,55 +285,7 @@ int main(int, char**)
 
 
         // Render Settings Editor
-        {
-            ImGui::Begin("Render Settings");
-
-            static bool change = false;
-            static int resolution[2];
-
-            ImGui::InputInt2("Resolution", resolution);
-            if (ImGui::Button("Submit Changes")) change = true;
-
-            if (change)
-            {
-                settings.xres = resolution[0];
-                settings.yres = resolution[1];
-
-                render_view_utils.resolution.x = resolution[0];
-                render_view_utils.resolution.y = resolution[1];
-
-                render_view_utils.scrolling = ImVec2(0, 0);
-
-                cameras[0].aspect = (float)settings.xres / (float)settings.yres;
-
-                free(pixels);
-                free(new_pixels);
-                free(pixel_ids);
-
-                pixel_ids = new int[settings.xres * settings.yres];
-
-#pragma omp parallel for
-                for (int i = 0; i < settings.xres * settings.yres - 1; i++)
-                {
-                    pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 1));
-                }
-
-                pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
-                new_pixels = (color_t*)malloc(settings.xres * settings.yres * sizeof(color_t));
-
-                glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
-
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, settings.xres, settings.yres, 0, GL_RGB, GL_FLOAT, new_pixels);
-
-                glBindTexture(GL_TEXTURE_2D, 0);
-
-                reset_render(pixels, new_pixels, settings.xres, settings.yres, sample_count, y);
-
-                change = false;
-            }
-
-            ImGui::End();
-        }
+        rsettings_windows.draw(settings, render_view_utils, cameras, sequence, pixels, new_pixels, pixel_ids, sample_count, y, edited);
 
 
         // demo window for ImGui
