@@ -6,9 +6,15 @@
 
 void Object::set_transform()
 {
-    set_translation(transformation_matrix, translate);
-    set_rotation(transformation_matrix, rotate);
-    set_scale(transformation_matrix, scale);
+    mat44 translate_matrix = mat44();
+    mat44 rotate_matrix = mat44();
+    mat44 scale_matrix = mat44();
+
+    set_translation(translate_matrix, translate);
+    set_rotation(rotate_matrix, rotate);
+    set_scale(scale_matrix, scale);
+
+    transformation_matrix = translate_matrix * rotate_matrix * scale_matrix;
 
     rVertex* vertices = (rVertex*)rtcGetGeometryBufferData(geometry, RTC_BUFFER_TYPE_VERTEX, 0);
 
@@ -143,6 +149,7 @@ void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& ob
 {
     int i = 0;
 
+    if (scene_materials.size() > 0) scene_materials.clear();
 
     for (auto object : objects)
     {
@@ -167,6 +174,8 @@ void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& 
     rtcSetSceneBuildQuality(g_scene, RTC_BUILD_QUALITY_HIGH);
     rtcSetSceneFlags(g_scene, RTC_SCENE_FLAG_DYNAMIC | RTC_SCENE_FLAG_ROBUST);
 
+    // we clear the materials vector to feed the newly created materials
+    if(scene_materials.size() > 0) scene_materials.clear();
 
     int i = 0;
 

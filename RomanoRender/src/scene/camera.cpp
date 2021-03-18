@@ -21,7 +21,7 @@ void Camera::update(int& xres, int& yres)
 
 	origin = pos;
 
-	vec3 w_(pos - lookat);
+	vec3 w_(pos - rotation);
 	w = w_.normalize();
 	u = cross(w, up).normalize();
 	v = cross(w, u);
@@ -29,4 +29,15 @@ void Camera::update(int& xres, int& yres)
 	lower_left_corner = origin - u * half_width - v * half_height - w;
 	h = u * 2.0f * half_width;
 	v = v * 2.0F * half_height;
+}
+
+void Camera::set_transform()
+{
+	mat44 translate_matrix = mat44();
+	mat44 rotate_matrix = mat44();
+
+	set_translation(translate_matrix, pos);
+	set_rotation(rotate_matrix, rotation);
+
+	transformation_matrix = translate_matrix * rotate_matrix;
 }

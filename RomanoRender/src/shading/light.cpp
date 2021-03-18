@@ -46,9 +46,20 @@ vec3 Square_Light::return_light_throughput(const float& d)
 
 vec3 Square_Light::return_ray_direction(const vec3& hit_position, const vec2& sample)
 {
-	const vec3 light_sample_position = transform(vec3(sample.x - 0.5f, sample.y - 0.5f, 0.0f), transform_mat);
-	const vec3 dir = light_sample_position - hit_position;
-	return dir.normalize();
+	return transform(vec3((sample.x - 0.5f) * size.x, (sample.y - 0.5f) * size.y, 0.0f), transform_mat);
+}
+
+void Square_Light::set_transform()
+{
+	mat44 translate_matrix = mat44();
+	mat44 rotate_matrix = mat44();
+
+	set_translation(translate_matrix, translate);
+	set_rotation(rotate_matrix, rotate);
+
+	transform_mat = translate_matrix * rotate_matrix;
+
+	normal = transform_dir(vec3(0.0f, 0.0f, 1.0f), transform_mat);
 }
 
 
