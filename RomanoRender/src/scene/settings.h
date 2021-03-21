@@ -13,6 +13,7 @@ public:
 	int yres;
 	int samples[3];
 	int bounces[3];
+	int integrator;
 	const char* output_path;
 	Logger printer;
 	int tile_number;
@@ -30,7 +31,9 @@ public:
 		//output_path(path),
 		tile_number(tilenum),
 		printer(_log)
-	{}
+	{
+		integrator = 0;
+	}
 };
 
 #endif

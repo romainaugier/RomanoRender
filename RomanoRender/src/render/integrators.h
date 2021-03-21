@@ -15,6 +15,10 @@
 #include "Tracy.hpp"
 
 
+#undef min
+#undef max
+
+
 #ifndef RENDER
 #define RENDER
 
@@ -26,6 +30,9 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 // ao integrator
 vec3 ambient_occlusion(int s, std::vector<vec2>& sampler, const Ray& r, Render_Settings& settings);
 
+
+// scene viewer integrator
+vec3 scene_viewer(const Ray& r, Render_Settings& settings);
 
 // funtion used to render a single pixel, used for progressive rendering
 void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat);

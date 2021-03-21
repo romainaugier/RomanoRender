@@ -24,8 +24,8 @@ static void glfw_error_callback(int error, const char* description)
 #include "app/outliner.h"
 #include "app/menubar.h"
 #include "app/shelf.h"
-#include "app/renderview.h"
 #include "app/editor.h"
+#include "app/renderview.h"
 #include "app/rendersettings.h"
 #include "scene/scene.h"
 #include "Tracy.hpp"
@@ -294,8 +294,9 @@ int main(int, char**)
         // progressive render variables update
         previous_y = y;
 
+        
         // Progressive rendering happens here
-        if (render && sample_count > 1)
+        if (render && sample_count > 1 && settings.integrator == 0)
         {
             progressive_render(sample_count, pixel_ids, y, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
@@ -351,8 +352,8 @@ int main(int, char**)
             if (y == previous_y) y = settings.yres;
         }
 
-
-        if (render && sample_count < 2)
+        
+        if (render && sample_count < 2 || render && settings.integrator > 0)
         {
             progressive_render_fast(sample_count, pixel_ids, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 

@@ -1,7 +1,9 @@
 #pragma once
 #include <vector>
 #include <random>
+#include "GL/gl3w.h"
 #include "GLFW/glfw3.h"
+#include "imgui.h"
 #include "matrix.h"
 #include "scene/settings.h"
 #include "vec2.h"
@@ -9,6 +11,7 @@
 
 #ifndef UTILS
 #define UTILS
+
 
 
 inline float estimate_sample_variance(vec3 samples[], int n)
@@ -139,7 +142,34 @@ inline float power_heuristic(int nf, float fPdf, int ng, float gPdf) {
 }
 
 
+struct Render_View_Utils
+{
+    GLuint render_view_texture;
+    ImVec2 scrolling;
+    ImVec2 resolution;
+    float zoom = 1.0f;
+    color_t* buffer1, * buffer2;
 
+    Render_View_Utils(float xres, float yres, color_t* buffer1, color_t* buffer2)
+    {
+        // initializing texture for the renderview
+        glGenTextures(1, &render_view_texture);
+        glBindTexture(GL_TEXTURE_2D, render_view_texture);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, xres, yres, 0, GL_RGB, GL_FLOAT, buffer1);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        scrolling = ImVec2(0.0f, 0.0f);
+
+        resolution = ImVec2(xres, yres);
+    }
+};
 
 
 

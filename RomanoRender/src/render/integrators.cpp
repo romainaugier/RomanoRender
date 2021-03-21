@@ -393,16 +393,41 @@ vec3 ambient_occlusion(int s, std::vector<vec2>& sampler, const Ray& r, Render_S
 
         const vec3 new_ray_dir = sample_ray_in_hemisphere(hit_normal, sample);
 
-        Ray shadow(hit_pos + hit_normal * 0.001f, new_ray_dir, 0.0f, 1.0f);
+        Ray shadow(hit_pos + hit_normal * 0.001f, new_ray_dir, 0.0f, 3.0f);
 
         rtcOccluded1(settings.scene, &context, &shadow.ray);
 
         if (shadow.ray.tfar > 0.0f)
         {
-            return vec3(clamp(shadow.ray.tfar, 0.0f, 0.8f));
+            return vec3(fit(shadow.ray.tfar, 0.0f, 3.0f, 0.0f, 1.0f));
         }
 
         else return vec3(0.0f);
+    }
+
+    return vec3(0.0f);
+}
+
+
+// simple pt scene viewer
+vec3 scene_viewer(const Ray& r, Render_Settings& settings)
+{
+    // initialize embree context
+    RTCIntersectContext context;
+    rtcInitIntersectContext(&context);
+
+    float near_clipping = 0.0f;
+    float far_clipping = 10000.0f;
+
+    RTCRayHit new_ray = r.rayhit;
+
+    rtcIntersect1(settings.scene, &context, &new_ray);
+
+    if (new_ray.hit.geomID != RTC_INVALID_GEOMETRY_ID)
+    {
+        const vec3 hit_normal = vec3(new_ray.hit.Ng_x, new_ray.hit.Ng_y, new_ray.hit.Ng_z).normalize();
+        
+        return vec3(fit(dot(hit_normal, r.direction), -1.0f, 0.0f, 0.5f, 0.25f));
     }
 
     return vec3(0.0f);
@@ -420,15 +445,15 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
 
     // aa Box-Muller
     vec2 d = sampler[s];
-    float dx = sqrt(-0.5 * log(d.x)) * cos(2 * M_PI * d.y);
-    float dy = sqrt(-0.5 * log(d.x)) * sin(2 * M_PI * d.y);
+    float dx = sqrt(-0.5f * log(d.x)) * cos(2.0f * M_PI * d.y);
+    float dy = sqrt(-0.5f * log(d.x)) * sin(2.0f * M_PI * d.y);
 
-    float x_ = (2 * (x + dx) / (float)settings.xres - 1) * cam.aspect * scale;
-    float y_ = (1 - 2 * (y + dy) / (float)settings.yres) * scale;
+    float x_ = (2.0f * (x + dx) / (float)settings.xres - 1.0f) * cam.aspect * scale;
+    float y_ = (1.0f - 2.0f * (y + dy) / (float)settings.yres) * scale;
 
     // dof
-    vec3 rand = (cam.aperture / 2) * sample_unit_disk();
-    vec3 sample_pos = vec3(x_, y_, -1);
+    vec3 rand = (cam.aperture / 2.0f) * sample_unit_disk();
+    vec3 sample_pos = vec3(x_, y_, -1.0f);
 
     // ray generation
     vec3 rayOriginWorld = transform(campos2, cam.transformation_matrix);
@@ -443,8 +468,9 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
 
     std::vector<int> light_path;
 
-    //col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
-    col = ambient_occlusion(s * x * y, sampler, ray, settings);
+    if (settings.integrator == 0) col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
+    else if (settings.integrator == 1) col = ambient_occlusion(s * x * y, sampler, ray, settings);
+    else if (settings.integrator == 2) col = scene_viewer(ray, settings);
 
     //col = HableToneMap(col);
 
@@ -473,15 +499,15 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
 
     // aa Box-Muller
     vec2 d = sampler[s];
-    float dx = sqrt(-0.5 * log(d.x)) * cos(2 * M_PI * d.y);
-    float dy = sqrt(-0.5 * log(d.x)) * sin(2 * M_PI * d.y);
+    float dx = sqrt(-0.5f * log(d.x)) * cos(2.0f * M_PI * d.y);
+    float dy = sqrt(-0.5f * log(d.x)) * sin(2.0f * M_PI * d.y);
 
-    float x_ = (2 * (x + dx) / (float)settings.xres - 1) * cam.aspect * scale;
-    float y_ = (1 - 2 * (y + dy) / (float)settings.yres) * scale;
+    float x_ = (2.0f * (x + dx) / (float)settings.xres - 1.0f) * cam.aspect * scale;
+    float y_ = (1.0f - 2.0f * (y + dy) / (float)settings.yres) * scale;
 
     // dof
-    vec3 rand = (cam.aperture / 2) * sample_unit_disk();
-    vec3 sample_pos = vec3(x_, y_, -1);
+    vec3 rand = (cam.aperture / 2.0f) * sample_unit_disk();
+    vec3 sample_pos = vec3(x_, y_, -1.0f);
 
     // ray generation
     vec3 rayOriginWorld = transform(campos2, cam.transformation_matrix);
@@ -496,10 +522,9 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
 
     std::vector<int> light_path;
 
-    //if (generate_random_float_fast(x * y + s) > 0.75f) col = pathtrace(s, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
-    col = ambient_occlusion(s * x * y, sampler, ray, settings);
-
-    //col = HableToneMap(col);
+    if (settings.integrator == 0) col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
+    else if (settings.integrator == 1) col = ambient_occlusion(s * x * y, sampler, ray, settings);
+    else if (settings.integrator == 2) col = scene_viewer(ray, settings);
 
     if (col.x < 0.0f || col.y < 0.0f || col.z < 0.0f)
     {
