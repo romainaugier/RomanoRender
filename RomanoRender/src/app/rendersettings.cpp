@@ -12,12 +12,16 @@ void Render_Settings_Window::draw(Render_Settings& settings, Render_View_Utils& 
 
     if (ImGui::CollapsingHeader("General"))
     {
-
-        ImGui::InputInt("Resolution X", &settings.xres);
+        ImGui::Text("Resolution");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(60.0f);
+        ImGui::DragInt("X", &settings.xres);
         if (ImGui::IsItemEdited()) { change = true; reset = true; }
         ImGui::SameLine();
-        ImGui::InputInt("Resolution Y", &settings.yres);
+        ImGui::DragInt("Y", &settings.yres);
         if (ImGui::IsItemEdited()) { change = true; reset = true; }
+        ImGui::PopItemWidth();
+
 
         if (reset)
         {
@@ -58,9 +62,8 @@ void Render_Settings_Window::draw(Render_Settings& settings, Render_View_Utils& 
     if (ImGui::CollapsingHeader("Integrator"))
     {
         const char* items[] = { "Pathtracer", "Ambient Occlusion", "Scene Viewer" };
-        static int current_item = 0;
 
-        ImGui::Combo("Integrator", &current_item, items, IM_ARRAYSIZE(items));
+        ImGui::Combo("Mode", &settings.integrator, items, IM_ARRAYSIZE(items));
         if (ImGui::IsItemEdited()) { change = true; }
     }
 

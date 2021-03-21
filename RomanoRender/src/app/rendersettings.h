@@ -2,7 +2,6 @@
 
 #include "scene/settings.h"
 #include "scene/camera.h"
-#include "renderview.h"
 #include "utils/utils.h"
 
 #ifndef RENDERSETTINGS

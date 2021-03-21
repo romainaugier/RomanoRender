@@ -14,36 +14,6 @@
 #define RENDERVIEW
 
 
-struct Render_View_Utils
-{
-	GLuint render_view_texture;
-	ImVec2 scrolling;
-	ImVec2 resolution;
-	float zoom = 1.0f;
-	color_t* buffer1, *buffer2;
-
-	Render_View_Utils(float xres, float yres, color_t* buffer1, color_t* buffer2) 
-	{
-		// initializing texture for the renderview
-		glGenTextures(1, &render_view_texture);
-		glBindTexture(GL_TEXTURE_2D, render_view_texture);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, xres, yres, 0, GL_RGB, GL_FLOAT, buffer1);
-
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		scrolling = ImVec2(0.0f, 0.0f);
-
-		resolution = ImVec2(xres, yres);
-	}
-};
-
-
 struct Render_View
 {
 	Render_View() {}
