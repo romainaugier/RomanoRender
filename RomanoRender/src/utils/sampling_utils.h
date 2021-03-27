@@ -21,7 +21,7 @@
 vec3 sample_ray_in_hemisphere(const vec3& hit_normal, const vec2& sample);
 vec3 sample_ray_in_hemisphere2(const vec3& hit_normal, const vec2& sample);
 vec3 sample_ray_in_sphere();
-vec3 sample_unit_disk();
+vec3 sample_unit_disk(int state);
 
 // random generator utils
 int wang_hash(int seed);

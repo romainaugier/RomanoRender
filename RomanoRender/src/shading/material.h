@@ -17,11 +17,10 @@ public:
         //name = "material_" + std::to_string(id);
         diffuse_color = vec3(0.3f);
         diffuse_weight = 1.0f;
-        roughness = 1.0f;
+        reflectance_roughness = 1.0f;
         refraction = 0.0f;
         islight = false;
         diffuse_roughness = 0.0f;
-        specular = 0.0f;
         reflectance = 0.0f;
         metallic = 0.0f;
         sss = 0.0f;
@@ -30,8 +29,7 @@ public:
         sss_abs = 0.0f;
         sss_steps = 8;
         ior = vec3(1.3f);
-        reflection_color = vec3(1.0f);
-        specular_color = vec3(1.0f);
+        reflectance_color = vec3(1.0f);
         refraction_color = vec3(1.0f);
         sss_color = vec3(1.0f);
     }
@@ -46,12 +44,11 @@ public:
     Material(int& id, std::string _name, vec3 color_parm, float _roughness, float _refrac) :
         name(_name),
         diffuse_color(color_parm),
-        roughness(_roughness),
+        reflectance_roughness(_roughness),
         refraction(_refrac)
     {
         diffuse_roughness = 0.0f;
         diffuse_weight = 1.0f;
-        specular = 0.0f;
         reflectance = 0.0f;
         metallic = 0.0f;
         sss = 0.0f;
@@ -60,8 +57,7 @@ public:
         sss_abs = 0.0f;
         sss_steps = 15;
         ior = vec3(1.0f);
-        reflection_color = vec3(1.0f);
-        specular_color = vec3(1.0f);
+        reflectance_color = vec3(1.0f);
         refraction_color = vec3(1.0f);
         sss_color = vec3(1.0f);
     }
@@ -77,17 +73,14 @@ public:
     float diffuse_weight;
     float diffuse_roughness;
 
-    float roughness;
-    vec3 reflection_color;
-
     float refraction;
     float refraction_roughness;
     vec3 refraction_color;
 
     float metallic;
     float reflectance;
-    float specular;
-    vec3 specular_color;
+    float reflectance_roughness;
+    vec3 reflectance_color;
     vec3 ior;
 
     float sss;

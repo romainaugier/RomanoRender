@@ -9,8 +9,6 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
     const int sampler_id = (int)(random_float * (sampler.size() - 1));
     const vec2 sample = sampler[sampler_id];
 
-    stat.add_ray();
-
     // ray terminated
     if (depth[0] == 0 || depth[1] == 0 || depth[2] == 0 || depth[3] == 0) return vec3(0.0f);
 
@@ -34,16 +32,14 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
         new_color = mats[hit_mat_id].diffuse_color;
 
         const float hit_diff_roughness = mats[hit_mat_id].diffuse_roughness;
-        const float hit_roughness = std::max(0.005f, mats[hit_mat_id].roughness);
+        const float hit_roughness = std::max(0.005f, mats[hit_mat_id].reflectance_roughness);
         const float hit_refraction = mats[hit_mat_id].refraction;
         const float hit_metallic = mats[hit_mat_id].metallic;
-        const float hit_specular = mats[hit_mat_id].specular;
         const float hit_reflectance = mats[hit_mat_id].reflectance;
         const float hit_sss = mats[hit_mat_id].sss;
 
-        const vec3 hit_specular_color = mats[hit_mat_id].specular_color;
+        const vec3 hit_reflectance_color = mats[hit_mat_id].reflectance_color;
         const vec3 hit_ior = mats[hit_mat_id].ior;
-        const vec3 hit_refl_color = mats[hit_mat_id].reflection_color;
         const vec3 hit_sss_color = mats[hit_mat_id].sss_color;
 
         const vec3 hit_normal = vec3(new_ray.hit.Ng_x, new_ray.hit.Ng_y, new_ray.hit.Ng_z).normalize();
@@ -59,7 +55,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
         vec3 ggx(0.0f);
 
         // direct Lighting
-        for (auto light : lights)
+        for (auto& light : lights)
         {
             for (int i = 0; i < samples[1]; i++)
             {
@@ -89,7 +85,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                 else if (domelight = dynamic_cast<Dome_Light*>(light)) ray_dir = domelight->return_ray_direction(hit_pos, sample);
 
                 // square light
-                if (sqlight = dynamic_cast<Square_Light*>(light))
+                else if (sqlight = dynamic_cast<Square_Light*>(light))
                 {
                     const vec3 light_sample_pos = sqlight->return_ray_direction(hit_pos, sample);
                     ray_dir = (light_sample_pos - hit_pos).normalize();
@@ -111,17 +107,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
                 if (shadow.ray.tfar > 0.0f)
                 {
-                    // point light
-                    if (ptlight = dynamic_cast<Point_Light*>(light)) radiance += ptlight->return_light_throughput(distance) * NdotL * area_shadow;
-
-                    // distant light
-                    else if (distlight = dynamic_cast<Distant_Light*>(light)) radiance += distlight->return_light_throughput(distance) * NdotL * area_shadow;
-
-                    // dome light
-                    else if (domelight = dynamic_cast<Dome_Light*>(light)) radiance += domelight->return_light_throughput(distance) * NdotL * area_shadow;
-
-                    // square light
-                    if (sqlight = dynamic_cast<Square_Light*>(light)) radiance += sqlight->return_light_throughput(distance) * NdotL * area_shadow;
+                    radiance += light->return_light_throughput(distance) * NdotL * area_shadow;
 
                     if (hit_reflectance > 0.0f)
                     {
@@ -310,7 +296,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                 new_ray_dir = reflect(r.direction, H.normalize());
                 light_path.push_back(2);
                 new_depth[1] -= 1;
-                mix = (hit_reflectance * clamp(f0, 0.04f, 1.0f) + hit_metallic) * mats[hit_mat_id].reflection_color;
+                mix = (hit_reflectance * clamp(f0, 0.04f, 1.0f) + hit_metallic) * hit_reflectance_color;
             }
 
             Ray new_ray(hit_pos + hit_normal * 0.001f, new_ray_dir);
@@ -319,8 +305,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
         }
 
 
-
-        color += kd * (new_color * inv_pi * radiance) + (refrac * hit_refraction) + ggx * hit_reflectance + indirect * mix + trans * hit_sss;
+        color += kd * (new_color * inv_pi * radiance) + (refrac * hit_refraction) + ggx * hit_reflectance * hit_reflectance_color + indirect * mix + trans * hit_sss;
     }
 
 
@@ -452,7 +437,8 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
     float y_ = (1.0f - 2.0f * (y + dy) / (float)settings.yres) * scale;
 
     // dof
-    vec3 rand = (cam.aperture / 2.0f) * sample_unit_disk();
+    vec3 rand = vec3(0.0f);
+    if (cam.aperture > 0.0f) rand = (cam.aperture / 2.0f) * sample_unit_disk(s);
     vec3 sample_pos = vec3(x_, y_, -1.0f);
 
     // ray generation
@@ -506,7 +492,8 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
     float y_ = (1.0f - 2.0f * (y + dy) / (float)settings.yres) * scale;
 
     // dof
-    vec3 rand = (cam.aperture / 2.0f) * sample_unit_disk();
+    vec3 rand = vec3(0.0f);
+    if (cam.aperture > 0.0f) rand = (cam.aperture / 2.0f) * sample_unit_disk(s);
     vec3 sample_pos = vec3(x_, y_, -1.0f);
 
     // ray generation
@@ -534,14 +521,14 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
 
     }
 
-    pixels[x + y * (settings.xres)].R += col.x, 0.45;
-    pixels[x + y * (settings.xres)].G += col.y, 0.45;
-    pixels[x + y * (settings.xres)].B += col.z, 0.45;
+    pixels[x + y * (settings.xres)].R += col.x;
+    pixels[x + y * (settings.xres)].G += col.y;
+    pixels[x + y * (settings.xres)].B += col.z;
 }
 
 
 // function used to render progressively to the screen
-void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
+void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t*& pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
 {
     cam.fov = 2 * rad2deg(std::atan(36.0f / (2 * cam.focal_length)));
 
@@ -557,7 +544,7 @@ void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& 
 }
 
 
-void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
+void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t*& pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
 {
     cam.fov = 2 * rad2deg(std::atan(36.0f / (2 * cam.focal_length)));
 

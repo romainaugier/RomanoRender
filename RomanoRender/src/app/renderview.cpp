@@ -32,7 +32,7 @@ void Render_View::draw(bool& render, Render_View_Utils& utils, int& s, int& y)
 
         if (is_hovered && mouse_wheel != 0.0f)
         {
-            utils.zoom -= (mouse_wheel * 0.03f);
+            utils.zoom -= (mouse_wheel * 0.1f);
         }
 
         ImGui::PushItemFlag(ImGuiWindowFlags_NoScrollWithMouse, 1);
@@ -49,7 +49,7 @@ void Render_View::draw(bool& render, Render_View_Utils& utils, int& s, int& y)
 }
 
 
-void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, int& s, int& y)
+void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, int& s, int& y, bool& save_window)
 {
     ImGui::Begin("Render Commands");
     {
@@ -76,7 +76,7 @@ void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, int& s, i
 
         if (ImGui::Button("Save Image"))
         {
-            bool save_window = true;
+            save_window = true;
         }
     }
     ImGui::End();

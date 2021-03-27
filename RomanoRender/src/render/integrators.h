@@ -43,10 +43,10 @@ void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, in
 
 
 // function used to render progressively to the screen
-void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat);
+void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t*& pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat);
 
 
-void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t* pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat);
+void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t*& pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat);
 
 
 #endif 

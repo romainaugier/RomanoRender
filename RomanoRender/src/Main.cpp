@@ -60,19 +60,17 @@ int main(int, char**)
 
     cameras.push_back(initial_cam); // this can be optional, but it will be the Default Camera
     initial_cam.~Camera();
-    //lights.push_back(new Dome_Light(vec3(1.0f), 1.0f)); // this too
 
     // loading sample sequences
     std::vector<std::vector<vec2>> sequence = load_sequences("D:/dev/Repos/Samples");
 
-    int* pixel_ids = new int[settings.xres * settings.yres];
+    int* pixel_ids =  (int*)malloc(settings.xres * settings.yres * sizeof(int));
     
 #pragma omp parallel for
-    for (int i = 0; i < settings.xres * settings.yres - 1; i++)
+    for (int i = 0; i < settings.xres * settings.yres; i++)
     {
-        pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 1));
+        pixel_ids[i] = (int)(generate_random_float_fast(i) * (sequence.size() - 2));
     }
-
 
     // initializing embree device and scene
     settings.device = initializeDevice();
@@ -80,10 +78,6 @@ int main(int, char**)
 
     rtcSetSceneBuildQuality(settings.scene, RTC_BUILD_QUALITY_HIGH);
     rtcSetSceneFlags(settings.scene, RTC_SCENE_FLAG_COMPACT | RTC_SCENE_FLAG_ROBUST);
-
-    // initializing image buffers 
-    color_t* pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
-    color_t* new_pixels = (color_t*)malloc(xres * yres * sizeof(color_t));
 
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
@@ -232,12 +226,15 @@ int main(int, char**)
     double render_1spp_time = 0.0;
     double render_avg = 0.0;
 
-    int previous_y = 0;
+    int previous_y = 0; 
     bool render = false;
     bool save_window = false;
 
     // initializing gl texture for the renderview
-    Render_View_Utils render_view_utils(settings.xres, settings.yres, pixels, new_pixels);
+    Render_View_Utils render_view_utils(settings.xres, settings.yres);
+
+    //render_view_utils.buffer1 = (color_t*)malloc(xres * yres * sizeof(color_t));
+    //render_view_utils.buffer2 = (color_t*)malloc(xres * yres * sizeof(color_t));
 
     // declaring all the editors
     Console console;
@@ -279,14 +276,9 @@ int main(int, char**)
                 first_edit = 2;
             }
             else if(first_edit > 1) rebuild_scene(settings.device, settings.scene, objects, materials);
-            reset_render(pixels, new_pixels, settings.xres, settings.yres, sample_count, y);
+            reset_render(render_view_utils.buffer1, render_view_utils.buffer2, settings.xres, settings.yres, sample_count, y);
             edited = false;
         }
-
-
-        // Render Settings Editor
-        rsettings_windows.draw(settings, render_view_utils, cameras, sequence, pixels, new_pixels, pixel_ids, sample_count, y, edited);
-
 
         // demo window for ImGui
         if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
@@ -298,7 +290,7 @@ int main(int, char**)
         // Progressive rendering happens here
         if (render && sample_count > 1 && settings.integrator == 0)
         {
-            progressive_render(sample_count, pixel_ids, y, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
+            progressive_render(sample_count, pixel_ids, y, sequence, render_view_utils.buffer1, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
 #pragma omp parallel for
             for (int z = 0; z < settings.yres; z++)
@@ -307,21 +299,15 @@ int main(int, char**)
                 {
                     if (z <= y + 50)
                     {
-                        new_pixels[x + z * settings.xres].R = powf(pixels[x + z * settings.xres].R / sample_count, 0.45f);
-                        new_pixels[x + z * settings.xres].G = powf(pixels[x + z * settings.xres].G / sample_count, 0.45f);
-                        new_pixels[x + z * settings.xres].B = powf(pixels[x + z * settings.xres].B / sample_count, 0.45f);
-
-                        /*
-                        pixels[x + y * settings.xres].R += powf((double)col.x, 0.45);
-                        pixels[x + y * settings.xres].G += powf((double)col.y, 0.45);
-                        pixels[x + y * settings.xres].B += powf((double)col.z, 0.45);
-                        */
+                        render_view_utils.buffer2[x + z * settings.xres].R = render_view_utils.buffer1[x + z * settings.xres].R / (float)sample_count;
+                        render_view_utils.buffer2[x + z * settings.xres].G = render_view_utils.buffer1[x + z * settings.xres].G / (float)sample_count;
+                        render_view_utils.buffer2[x + z * settings.xres].B = render_view_utils.buffer1[x + z * settings.xres].B / (float)sample_count;
                     }
                 }
             }
 
             glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, new_pixels);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, render_view_utils.buffer2);
             glBindTexture(GL_TEXTURE_2D, 0);
 
             if (y == 0)
@@ -351,32 +337,27 @@ int main(int, char**)
 
             if (y == previous_y) y = settings.yres;
         }
-
         
+        
+
         if (render && sample_count < 2 || render && settings.integrator > 0)
+        //if (render)
         {
-            progressive_render_fast(sample_count, pixel_ids, sequence, pixels, settings, cameras[0], materials, lights, samples, bounces, render_stats);
+            progressive_render_fast(sample_count, pixel_ids, sequence, render_view_utils.buffer1, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
 #pragma omp parallel for
             for (int z = 0; z < settings.yres; z++)
             {
                 for (int x = 0; x < settings.xres; x++)
                 {
-                    new_pixels[x + z * settings.xres].R = pixels[x + z * settings.xres].R / sample_count;
-                    new_pixels[x + z * settings.xres].G = pixels[x + z * settings.xres].G / sample_count;
-                    new_pixels[x + z * settings.xres].B = pixels[x + z * settings.xres].B / sample_count;
-
-                    /*
-                    pixels[x + y * settings.xres].R += powf((double)col.x, 0.45);
-                    pixels[x + y * settings.xres].G += powf((double)col.y, 0.45);
-                    pixels[x + y * settings.xres].B += powf((double)col.z, 0.45);
-                    */
-                    
+                    render_view_utils.buffer2[x + z * settings.xres].R = render_view_utils.buffer1[x + z * settings.xres].R / (float)sample_count;
+                    render_view_utils.buffer2[x + z * settings.xres].G = render_view_utils.buffer1[x + z * settings.xres].G / (float)sample_count;
+                    render_view_utils.buffer2[x + z * settings.xres].B = render_view_utils.buffer1[x + z * settings.xres].B / (float)sample_count;
                 }
             }
 
             glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, new_pixels);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, render_view_utils.buffer2);
             glBindTexture(GL_TEXTURE_2D, 0);
 
             sample_count++;
@@ -389,6 +370,9 @@ int main(int, char**)
         menubar.draw();
         ImGui::PopStyleVar();
 
+        // Render Settings Editor
+        rsettings_windows.draw(settings, render_view_utils, cameras, sequence, pixel_ids, sample_count, y, edited);
+
         // geometry shelf
         geo_shelf.draw(settings, objects, lights, cameras, console, edited, first_edit);
 
@@ -400,11 +384,11 @@ int main(int, char**)
 
 
         // render view
-        rview_buttons.draw(render, render_view_utils, sample_count, y);
+        rview_buttons.draw(render, render_view_utils, sample_count, y, save_window);
         render_view.draw(render, render_view_utils, sample_count, y);
 
         // save window
-        rview_save_window.draw(settings.xres, settings.yres, sample_count, new_pixels, save_window);
+        rview_save_window.draw(settings.xres, settings.yres, sample_count, render_view_utils.buffer1, save_window);
 
         // info window
         {
@@ -426,6 +410,7 @@ int main(int, char**)
 
         // editor
         editor.draw(outliner, objects, lights, cameras, edited);
+
 
         // Rendering
         ImGui::Render();
@@ -457,6 +442,11 @@ int main(int, char**)
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    // cleanup utility and buffers
+    free(pixel_ids);
+    free(render_view_utils.buffer1);
+    free(render_view_utils.buffer2);
 
     return 0;
 }
