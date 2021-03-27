@@ -60,7 +60,7 @@ vec3 HableToneMap(vec3 color)
 */
 
 
-inline void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yres, int& s, int& y)
+inline void reset_render(color_t*& pixels, color_t*& new_pixels, int xres, int yres, int& s, int& y)
 {
 #pragma omp parallel for
     for (int y = 0; y < yres; y++)
@@ -70,6 +70,10 @@ inline void reset_render(color_t* pixels, color_t* new_pixels, int xres, int yre
             pixels[x + y * xres].R = 0.0f;
             pixels[x + y * xres].G = 0.0f;
             pixels[x + y * xres].B = 0.0f;
+
+            new_pixels[x + y * xres].R = 0.0f;
+            new_pixels[x + y * xres].G = 0.0f;
+            new_pixels[x + y * xres].B = 0.0f;
         }
     }
     
@@ -148,10 +152,26 @@ struct Render_View_Utils
     ImVec2 scrolling;
     ImVec2 resolution;
     float zoom = 1.0f;
-    color_t* buffer1, * buffer2;
+    color_t* buffer1 = nullptr;
+    color_t* buffer2 = nullptr;
 
-    Render_View_Utils(float xres, float yres, color_t* buffer1, color_t* buffer2)
+    Render_View_Utils(float xres, float yres)
     {
+        this->buffer1 = (color_t*)malloc(xres * yres * sizeof(color_t));
+        this->buffer2 = (color_t*)malloc(xres * yres * sizeof(color_t));
+
+
+        for (int i = 0; i < xres * yres; i++)
+        {
+            this->buffer1[i].R = 0.0f; 
+            this->buffer1[i].G = 0.0f; 
+            this->buffer1[i].B = 0.0f;
+
+            this->buffer2[i].R = 0.0f; 
+            this->buffer2[i].G = 0.0f; 
+            this->buffer2[i].B = 0.0f;
+        }
+
         // initializing texture for the renderview
         glGenTextures(1, &render_view_texture);
         glBindTexture(GL_TEXTURE_2D, render_view_texture);
@@ -161,7 +181,7 @@ struct Render_View_Utils
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, xres, yres, 0, GL_RGB, GL_FLOAT, buffer1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, xres, yres, 0, GL_RGB, GL_FLOAT, this->buffer1);
 
         glBindTexture(GL_TEXTURE_2D, 0);
 

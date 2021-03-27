@@ -8,5 +8,5 @@ struct Editor
 {
 	Editor() {}
 
-	void draw(Outliner& outliner, std::vector<Object>& objects, std::vector<Light*> lights, std::vector<Camera>& cameras, bool& edited);
+	void draw(Outliner& outliner, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, bool& edited);
 };

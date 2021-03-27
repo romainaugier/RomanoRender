@@ -25,7 +25,7 @@ struct Render_View
 struct Render_View_Buttons
 {
 	Render_View_Buttons() {}
-	void draw(bool& render, Render_View_Utils& utils, int& s, int& y);
+	void draw(bool& render, Render_View_Utils& utils, int& s, int& y, bool& save_window);
 };
 
 

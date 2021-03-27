@@ -1,7 +1,7 @@
 #include "editor.h"
 
 
-void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<Light*> lights, std::vector<Camera>& cameras, bool& edited)
+void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, bool& edited)
 {
 	if (objects.size() > 0 || cameras.size() > 0 || lights.size() > 0)
 	{
@@ -45,16 +45,19 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 
 				if (ImGui::CollapsingHeader("Reflection"))
 				{
-					ImGui::ColorEdit3("Reflection Color", &objects[s].material.reflection_color.x, ImGuiColorEditFlags_Float);
+					ImGui::ColorEdit3("Reflection Color", &objects[s].material.reflectance_color.x, ImGuiColorEditFlags_Float);
 					if (ImGui::IsItemEdited()) { edited = true; }
 
 					ImGui::DragFloat("Reflection Weight", &objects[s].material.reflectance, 0.05f, 0.0f, 1.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
 
-					ImGui::DragFloat("Reflection Roughness", &objects[s].material.roughness, 0.05f, 0.0f, 1.0f);
+					ImGui::DragFloat("Reflection Roughness", &objects[s].material.reflectance_roughness, 0.05f, 0.0f, 1.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
 
 					ImGui::DragFloat("Metallic", &objects[s].material.metallic, 0.05f, 0.0f, 1.0f);
+					if (ImGui::IsItemEdited()) { edited = true; }
+
+					ImGui::DragFloat3("Ior", &objects[s].material.ior.x, 0.05, 0.0f, 5.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
 				}
 

@@ -93,8 +93,8 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
         }
 
         // deleting the selected item with the delete key
-        if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
-            ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+        if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
+            ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
         {
             edited = true;
 
@@ -124,6 +124,37 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
                 delete lights[s];
 
                 lights.erase(lights.begin() + s);
+            }
+        }
+
+        // duplicate selected item in the outliner
+        if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space)))
+        {
+            edited = true;
+
+            if (selection_type == Selection_Type::SelectionType_Object)
+            {
+                // shortcut : s = type_selected variable
+                int s = type_selected;
+                Object duplicate = objects[s];
+
+                objects.push_back(duplicate);
+            }
+
+            if (selection_type == Selection_Type::SelectionType_Camera)
+            {
+                int s = type_selected;
+                Camera duplicate = cameras[s];
+
+                cameras.push_back(duplicate);
+            }
+
+            if (selection_type == Selection_Type::SelectionType_Light)
+            {
+                int s = type_selected;
+                Light* duplicate = lights[s];
+
+                lights.push_back(duplicate);
             }
         }
 	}

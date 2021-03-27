@@ -34,11 +34,11 @@ vec3 sample_ray_in_sphere()
 }
 
 
-vec3 sample_unit_disk()
+vec3 sample_unit_disk(int state)
 {
     vec3 p;
     do {
-        p = 2.0 * vec3(generate_random_float_slow(), generate_random_float_slow(), 0) - vec3(1.0f, 1.0f, 0.0f);
+        p = 2.0 * vec3(generate_random_float_fast(state), generate_random_float_fast(state + 1), 0) - vec3(1.0f, 1.0f, 0.0f);
     } while (dot(p, p) >= 1);
     return p;
 }
