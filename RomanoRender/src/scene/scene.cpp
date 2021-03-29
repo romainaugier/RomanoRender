@@ -112,7 +112,6 @@ void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& obj
         int i = 0;
 
 //#pragma omp parallel for
-
         for (auto& object : loader.LoadedMeshes)
         {
             int vtx_number;
@@ -145,10 +144,8 @@ void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& obj
 }
 
 
-void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials)
+void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials, std::vector<Light*>& lights)
 {
-    int i = 0;
-
     if (scene_materials.size() > 0) scene_materials.clear();
 
     for (auto object : objects)
@@ -158,15 +155,28 @@ void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& ob
         //rtcReleaseGeometry(geo);
 
         scene_materials.push_back(object.material);
-
-        i++;
     }
+
+    
+    for (auto light : lights)
+    {
+        Square_Light* sqlight = nullptr;
+
+        if (sqlight = static_cast<Square_Light*>(light))
+        {
+            RTCGeometry light_geo = sqlight->set_light_geometry(g_device);
+            rtcCommitGeometry(light_geo);
+            unsigned int geoID = rtcAttachGeometry(g_scene, light_geo);
+            scene_materials.emplace_back(geoID, sqlight->color, sqlight->normal, true);
+        }
+    }
+    
 
     rtcCommitScene(g_scene);
 }
 
 
-void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials)
+void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials, std::vector<Light*>& lights)
 {
     rtcReleaseScene(g_scene);
 
@@ -177,7 +187,6 @@ void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& 
     // we clear the materials vector to feed the newly created materials
     if(scene_materials.size() > 0) scene_materials.clear();
 
-    int i = 0;
 
     for (auto object : objects)
     {
@@ -187,8 +196,22 @@ void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& 
 
         scene_materials.push_back(object.material);
 
-        i++;
     }
+
+    
+    for (auto light : lights)
+    {
+        Square_Light* sqlight = nullptr;
+
+        if (sqlight = static_cast<Square_Light*>(light))
+        {
+            RTCGeometry light_geo = sqlight->set_light_geometry(g_device);
+            rtcCommitGeometry(light_geo);
+            unsigned int geoID = rtcAttachGeometry(g_scene, light_geo);
+            scene_materials.emplace_back(geoID, sqlight->color, sqlight->normal, true);
+        }
+    }
+    
 
     rtcCommitScene(g_scene);
 }

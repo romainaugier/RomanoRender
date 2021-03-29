@@ -44,6 +44,9 @@ void MenuBar::draw()
 			ImGui::EndMenu();
 		}
 
+		ImVec2 win_width = ImGui::GetContentRegionAvail();
+		ImGui::Dummy(ImVec2(win_width.x - 150.0f, 0.0f));
+
 		// widgets for cpu and ram usage
 #undef max
 		float cpu_usage = std::max(0.1f, GetCPULoad());

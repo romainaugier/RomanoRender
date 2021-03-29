@@ -7,7 +7,6 @@
 #include "matrix.h"
 #include "scene/settings.h"
 #include "vec2.h"
-#include "Tracy.hpp"
 
 #ifndef UTILS
 #define UTILS
@@ -60,7 +59,7 @@ vec3 HableToneMap(vec3 color)
 */
 
 
-inline void reset_render(color_t*& pixels, color_t*& new_pixels, int xres, int yres, int& s, int& y)
+inline void reset_render(color_t*& __restrict pixels, color_t*& __restrict new_pixels, int xres, int yres, int& s, int& y)
 {
 #pragma omp parallel for
     for (int y = 0; y < yres; y++)

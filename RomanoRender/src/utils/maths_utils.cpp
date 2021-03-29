@@ -161,7 +161,7 @@ vec3 reflect(const vec3& i, const vec3& n)
 }
 
 
-vec3 refract(const vec3 i, const vec3& n, const float ior)
+vec3 refract(const vec3 i, const vec3& n, const float ior, bool& has_reflected)
 {
     vec3 T(0.f);
     vec3 n_t = n;
@@ -184,20 +184,27 @@ vec3 refract(const vec3 i, const vec3& n, const float ior)
 
     if (radical > 0.0)
     {
-        //T = (n1 / n2) * (i.normalize() - dt * n_t) - n_t * sqrt(radical);
         T = n_ior * i + (n_ior * -dt - sqrt(radical)) * n_t;
 
         float r0 = ((n1 - n2) / (n1 + n2)) * ((n1 - n2) / (n1 + n2));
         float r;
 
 
-        if (in) r = r0 + (1 - r0) * std::pow(1 + dot(i, n), 5);
-        else r = r0 + (1 - r0) * std::pow(1 - dot(T, n), 5);
+        if (in) r = r0 + (1.0f - r0) * std::pow(1 + dot(i, n), 5);
+        else r = r0 + (1.0f - r0) * std::pow(1 - dot(T, n), 5);
 
-        if (generate_random_float_slow() < r) T = reflect(i, n);
+        if (generate_random_float_slow() < r)
+        {
+            T = reflect(i, n);
+            has_reflected = true;
+        }
         else T = T;
     }
-    else T = reflect(i, n);
+    else
+    {
+        T = reflect(i, n);
+        has_reflected = true;
+    }
 
     return T;
 }

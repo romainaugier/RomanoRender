@@ -49,6 +49,14 @@ vec3 Square_Light::return_ray_direction(const vec3& hit_position, const vec2& sa
 	return transform(vec3((sample.x - 0.5f) * size.x, (sample.y - 0.5f) * size.y, 0.0f), transform_mat);
 }
 
+void Square_Light::update_positions()
+{
+	positions[0] = vec3(size.x / 2.0f, size.y / 2.0f, 0.0f);
+	positions[1] = vec3(-size.x / 2.0f, size.y / 2.0f, 0.0f);
+	positions[2] = vec3(-size.x / 2.0f, -size.y / 2.0f, 0.0f);
+	positions[3] = vec3(size.x / 2.0f, -size.y / 2.0f, 0.0f);
+}
+
 void Square_Light::set_transform()
 {
 	mat44 translate_matrix = mat44();
@@ -60,6 +68,38 @@ void Square_Light::set_transform()
 	transform_mat = translate_matrix * rotate_matrix;
 
 	normal = transform_dir(vec3(0.0f, 0.0f, 1.0f), transform_mat);
+
+	update_positions();
+
+	for (int i = 0; i < 4; i++)
+	{
+		positions[i] = transform(positions[i], transform_mat);
+	}
+}
+
+RTCGeometry Square_Light::set_light_geometry(RTCDevice& g_device)
+{
+	RTCGeometry light_geo = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+
+	rVertex* vertices = (rVertex*)rtcSetNewGeometryBuffer(light_geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, sizeof(rVertex), sizeof(positions) / sizeof(vec3));
+
+	for (int i = 0; i < 4; i++)
+	{
+		vertices[i].x = positions[i].x;
+		vertices[i].y = positions[i].y;
+		vertices[i].z = positions[i].z;
+	}
+
+	Triangle* triangles = (Triangle*)rtcSetNewGeometryBuffer(light_geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, sizeof(Triangle), 2);
+
+	triangles[0].v0 = indices[0];
+	triangles[0].v1 = indices[1];
+	triangles[0].v2 = indices[2];
+	triangles[1].v0 = indices[3];
+	triangles[1].v1 = indices[4];
+	triangles[1].v2 = indices[5];
+
+	return light_geo;
 }
 
 

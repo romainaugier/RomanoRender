@@ -267,7 +267,6 @@
     <ClInclude Include="src\scene\camera.h" />
     <ClInclude Include="src\shading\light.h" />
     <ClInclude Include="src\app\log.h" />
-    <ClInclude Include="src\Tracy.hpp" />
     <ClInclude Include="src\utils\embree_utils.h" />
     <ClInclude Include="src\utils\file_utils.h" />
     <ClInclude Include="src\shading\material.h" />
@@ -276,10 +275,12 @@
     <ClInclude Include="src\render\integrators.h" />
     <ClInclude Include="src\scene\scene.h" />
     <ClInclude Include="src\scene\objloader.h" />
+    <ClInclude Include="src\utils\ocio_utils.h" />
     <ClInclude Include="src\utils\ray.h" />
     <ClInclude Include="src\scene\settings.h" />
     <ClInclude Include="src\scene\stats.h" />
     <ClInclude Include="src\utils\sampling_utils.h" />
+    <ClInclude Include="src\utils\str_utils.h" />
     <ClInclude Include="src\utils\utils.h" />
     <ClInclude Include="src\utils\vec2.h" />
     <ClInclude Include="src\utils\vec3.h" />
@@ -312,12 +313,13 @@
     <ClCompile Include="src\scene\stats.cpp" />
     <ClCompile Include="src\shading\light.cpp" />
     <ClCompile Include="src\shading\material.cpp" />
-    <ClCompile Include="src\TracyClient.cpp" />
     <ClCompile Include="src\shading\bsdf.cpp" />
     <ClCompile Include="src\utils\embree_utils.cpp" />
     <ClCompile Include="src\utils\file_utils.cpp" />
     <ClCompile Include="src\utils\maths_utils.cpp" />
+    <ClCompile Include="src\utils\ocio_utils.cpp" />
     <ClCompile Include="src\utils\sampling_utils.cpp" />
+    <ClCompile Include="src\utils\str_utils.cpp" />
     <ClCompile Include="src\utils\windows_utils.cpp" />
   </ItemGroup>
   <ItemGroup>

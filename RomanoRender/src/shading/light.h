@@ -1,10 +1,12 @@
 #pragma once
 
+#include "embree3/rtcore.h"
 
 #include "utils/vec3.h"
 #include "utils/maths_utils.h"
 #include "utils/matrix.h"
 #include "utils/sampling_utils.h"
+#include "utils/utils.h"
 
 
 #ifndef LIGHT
@@ -85,6 +87,12 @@ public:
 	vec3 normal = vec3(0.0f, 0.0f, 1.0f);
 	vec3 translate = vec3(0.0f);
 	vec3 rotate = vec3(0.0f);
+	vec3 positions[4] = { vec3(0.5f, 0.5f, 0.0f),
+						  vec3(-0.5f, 0.5f, 0.0f), 
+						  vec3(-0.5f, -0.5f, 0.0f), 
+						  vec3(0.5f, -0.5f, 0.0f) };
+
+	int indices[6] = {0,1,2,2,3,0};
 	mat44 transform_mat = mat44();
 	vec2 size = vec2(1.0f, 1.0f);
 
@@ -101,6 +109,10 @@ public:
 	vec3 return_ray_direction(const vec3& hit_position, const vec2& sample) override;
 
 	void set_transform();
+
+	void update_positions();
+
+	RTCGeometry set_light_geometry(RTCDevice& g_device);
 };
 
 

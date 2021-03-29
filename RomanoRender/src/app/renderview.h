@@ -8,6 +8,7 @@
 #include "imgui_internal.h"
 #include <GL/gl3w.h> 
 #include "OpenImageIO/imagebuf.h"
+#include "utils/ocio_utils.h"
 #include "utils/utils.h"
 
 #ifndef RENDERVIEW
@@ -25,7 +26,7 @@ struct Render_View
 struct Render_View_Buttons
 {
 	Render_View_Buttons() {}
-	void draw(bool& render, Render_View_Utils& utils, int& s, int& y, bool& save_window);
+	void draw(bool& render, Render_View_Utils& utils, OCIO_Utils& ocio_utils, int& s, int& y, bool& save_window);
 };
 
 
