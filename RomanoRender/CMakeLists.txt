@@ -18,6 +18,7 @@ find_package(OpenImageIO REQUIRED)
 find_package(Boost 1.75.0 REQUIRED)
 find_package(Alembic CONFIG REQUIRED)
 find_package(OpenMP CONFIG REQUIRED)
+find_package(OpenColorIO CONFIG REQUIRED)
 
 # Include dependencies
 include_directories(${OpenImageIO_INCLUDE_DIRS})
@@ -51,6 +52,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENIMAGEIO_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PRIVATE Alembic::Alembic)
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenColorIO)
 
 #-------------------------------
 

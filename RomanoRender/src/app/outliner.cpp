@@ -136,7 +136,8 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
             {
                 // shortcut : s = type_selected variable
                 int s = type_selected;
-                Object duplicate = objects[s];
+                Object duplicate(objects[s]);
+                duplicate.name = increment_name(duplicate.name);
 
                 objects.push_back(duplicate);
             }
@@ -144,7 +145,8 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
             if (selection_type == Selection_Type::SelectionType_Camera)
             {
                 int s = type_selected;
-                Camera duplicate = cameras[s];
+                Camera duplicate(cameras[s]);
+                duplicate.name = increment_name(duplicate.name);
 
                 cameras.push_back(duplicate);
             }
@@ -152,7 +154,8 @@ void Outliner::draw(std::vector<Object>& objects, std::vector<Camera>& cameras, 
             if (selection_type == Selection_Type::SelectionType_Light)
             {
                 int s = type_selected;
-                Light* duplicate = lights[s];
+                Light* duplicate(lights[s]);
+                duplicate->name = increment_name(duplicate->name);
 
                 lights.push_back(duplicate);
             }

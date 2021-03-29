@@ -66,9 +66,6 @@
     <ClInclude Include="src\scene\tinyobjl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Tracy.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\maths\maths.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -138,15 +135,18 @@
     <ClInclude Include="src\app\rendersettings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\ocio_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\str_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\app\gl3w.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\TracyClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\embree_utils.cpp">
@@ -237,6 +237,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\app\rendersettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\ocio_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\str_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

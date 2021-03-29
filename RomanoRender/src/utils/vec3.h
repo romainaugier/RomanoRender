@@ -1,6 +1,5 @@
 #pragma once
 #include <iostream>
-#include "Tracy.hpp"
 
 #ifndef VEC3
 #define VEC3

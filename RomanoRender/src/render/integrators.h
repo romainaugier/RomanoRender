@@ -12,9 +12,6 @@
 #include "scene/stats.h"
 
 
-#include "Tracy.hpp"
-
-
 #undef min
 #undef max
 

@@ -9,6 +9,7 @@
 #include "utils/file_utils.h"
 #include "utils/matrix.h"
 #include "shading/material.h"
+#include "shading/light.h"
 #include "app/console.h"
 
 #include "tinyobjl.h"
@@ -329,22 +330,36 @@ struct Object
         translate = vec3(0.0f); rotate = vec3(0.0f); scale = vec3(1.0f);
     }
 
+    Object(const Object& obj) 
+    {
+        id = obj.id + 1;
+        name = obj.name;
+        material = obj.material;
+        geometry = obj.geometry;
+        orig_positions = obj.orig_positions;
+        vtx_count = obj.vtx_count;
+        transformation_matrix = obj.transformation_matrix;
+        translate = obj.translate;
+        rotate = obj.rotate;
+        scale = obj.scale;
+    }
+
     void set_transform();
 
     void release();
 };
 
 
-RTCGeometry load_geometry(tinyobj::shape_t& shape, tinyobj::attrib_t& attrib, RTCDevice& g_device, std::string& name, int& size);
+RTCGeometry load_geometry(objl::Mesh& object, RTCDevice& g_device, std::string& name, rVertex* orig, int& size);
 
 
 void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& objects, Console& console);
 
 
-void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials);
+void build_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials, std::vector<Light*>& lights);
 
 
-void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials);
+void rebuild_scene(RTCDevice& g_device, RTCScene& g_scene, std::vector<Object>& objects, std::vector<Material>& scene_materials, std::vector<Light*>& lights);
 
 
 #endif

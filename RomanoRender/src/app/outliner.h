@@ -8,6 +8,7 @@
 #include "scene/scene.h"
 #include "shading/light.h"
 #include "console.h"
+#include "utils/str_utils.h"
 
 #ifndef OUTLINER
 #define OUTLINER

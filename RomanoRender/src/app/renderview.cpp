@@ -1,6 +1,9 @@
 #include "renderview.h"
 
 
+namespace OCIO = OCIO_NAMESPACE;
+
+
 void Render_View::draw(bool& render, Render_View_Utils& utils, int& s, int& y)
 {
     {
@@ -49,7 +52,7 @@ void Render_View::draw(bool& render, Render_View_Utils& utils, int& s, int& y)
 }
 
 
-void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, int& s, int& y, bool& save_window)
+void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, OCIO_Utils& ocio_utils, int& s, int& y, bool& save_window)
 {
     ImGui::Begin("Render Commands");
     {
@@ -78,6 +81,21 @@ void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, int& s, i
         {
             save_window = true;
         }
+
+        ImGui::SameLine();
+        
+        ImVec2 win_width = ImGui::GetContentRegionAvail();
+        ImGui::Dummy(ImVec2(win_width.x - (150.0f + ImGui::GetFontSize() * 5), 0.0f));
+
+        ImGui::SameLine();
+
+        static int current_item = 0;
+
+        ImGui::PushItemWidth(150.0f);
+        ImGui::Combo("Views", &current_item, &ocio_utils.active_views[0], ocio_utils.active_views.size());
+        ImGui::PopItemWidth();
+
+        ocio_utils.current_view = ocio_utils.active_views[current_item];
     }
     ImGui::End();
 }

@@ -28,8 +28,8 @@ static void glfw_error_callback(int error, const char* description)
 #include "app/renderview.h"
 #include "app/rendersettings.h"
 #include "scene/scene.h"
-#include "Tracy.hpp"
 #include "utils/utils.h"
+#include "utils/ocio_utils.h"
 
 
 int main(int, char**)
@@ -42,8 +42,12 @@ int main(int, char**)
     int nee_samples = 1;
     int gi_samples = 1;
     int samples[] = { unified_samples, nee_samples, gi_samples };
-    int bounces[] = { 6, 6, 10, 1 };
+    int bounces[] = { 10, 10, 10, 1 };
     float variance_threshold = 0.001;
+
+    // initializing the ocio context
+    OCIO::ConstConfigRcPtr OCIO_CONFIG = initialize_ocio_config();
+    OCIO_Utils ocio_utils(OCIO_CONFIG);
 
     // initializing different object we will need to render
     Logger log(3);
@@ -272,10 +276,10 @@ int main(int, char**)
         {
             if (first_edit == 1)
             {
-                build_scene(settings.device, settings.scene, objects, materials);
+                build_scene(settings.device, settings.scene, objects, materials, lights);
                 first_edit = 2;
             }
-            else if(first_edit > 1) rebuild_scene(settings.device, settings.scene, objects, materials);
+            else if(first_edit > 1) rebuild_scene(settings.device, settings.scene, objects, materials, lights);
             reset_render(render_view_utils.buffer1, render_view_utils.buffer2, settings.xres, settings.yres, sample_count, y);
             edited = false;
         }
@@ -384,7 +388,7 @@ int main(int, char**)
 
 
         // render view
-        rview_buttons.draw(render, render_view_utils, sample_count, y, save_window);
+        rview_buttons.draw(render, render_view_utils, ocio_utils, sample_count, y, save_window);
         render_view.draw(render, render_view_utils, sample_count, y);
 
         // save window

@@ -10,7 +10,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
     const vec2 sample = sampler[sampler_id];
 
     // ray terminated
-    if (depth[0] == 0 || depth[1] == 0 || depth[2] == 0 || depth[3] == 0) return vec3(0.0f);
+    if (depth[0] == 0 || depth[1] == 0 || depth[2] == 0) return vec3(0.0f);
 
     // initialize embree context
     RTCIntersectContext context;
@@ -29,13 +29,21 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
     {
         int hit_mat_id = new_ray.hit.geomID;
 
+        if (mats[hit_mat_id].islight)
+        {
+            if (dot(mats[hit_mat_id].normal, r.direction) < 0 && depth[0] == 10) return mats[hit_mat_id].diffuse_color;
+            else if (light_path.size() > 1 && light_path[0] == 1 && light_path[1] == 3) return mats[hit_mat_id].diffuse_color * 10.0f;
+            else return vec3(0.0f);
+        }
+
         new_color = mats[hit_mat_id].diffuse_color;
 
         const float hit_diff_roughness = mats[hit_mat_id].diffuse_roughness;
+        const float hit_diff_weight = mats[hit_mat_id].diffuse_weight;
         const float hit_roughness = std::max(0.005f, mats[hit_mat_id].reflectance_roughness);
         const float hit_refraction = mats[hit_mat_id].refraction;
         const float hit_metallic = mats[hit_mat_id].metallic;
-        const float hit_reflectance = mats[hit_mat_id].reflectance;
+        float hit_reflectance = mats[hit_mat_id].reflectance;
         const float hit_sss = mats[hit_mat_id].sss;
 
         const vec3 hit_reflectance_color = mats[hit_mat_id].reflectance_color;
@@ -109,7 +117,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                 {
                     radiance += light->return_light_throughput(distance) * NdotL * area_shadow;
 
-                    if (hit_reflectance > 0.0f)
+                    if (hit_reflectance > 0.0f || hit_refraction > 0.0f)
                     {
                         const vec3 H = (ray_dir + -r.direction).normalize();
                         const float NdotH = Saturate(dot(hit_normal, H));
@@ -129,7 +137,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
         vec3 mix(1.0f);
         const float f0 = fresnel_reflection_coef(hit_ior.x, hit_normal, r.direction) * hit_reflectance;
-        kd = (1.0f - clamp(abs(f0), 0.02f, 1.0f)) * (1.0f - hit_metallic) * (1.0f - hit_refraction);
+        kd = (1.0f - clamp(abs(f0), 0.02f, 1.0f)) * (1.0f - hit_metallic) * (1.0f - hit_refraction) * hit_diff_weight;
 
         // refraction
         if (hit_refraction > 0.0f)
@@ -141,7 +149,11 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
             vec3 H = ggx_microfacet(hit_normal, mats[hit_mat_id].refraction_roughness, sample);
 
-            vec3 new_ray_dir = refract(r.direction, H.normalize(), hit_ior.x);
+            bool has_reflected = false;
+
+            vec3 new_ray_dir = refract(r.direction, H.normalize(), hit_ior.x, has_reflected);
+
+            if (has_reflected) hit_reflectance = 1.0f;
 
             Ray new_ray(hit_pos + hit_normal * offset, new_ray_dir);
 
@@ -189,7 +201,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                     transmitted = true;
                     step = ray.rayhit.ray.tfar;
                     end_position = position + direction * step;
-                    end_normal = vec3(ray.rayhit.hit.Ng_x, ray.rayhit.hit.Ng_y, ray.rayhit.hit.Ng_z);
+                    end_normal = vec3(ray.rayhit.hit.Ng_x, ray.rayhit.hit.Ng_y, ray.rayhit.hit.Ng_z).normalize();
 
                     break;
                 }
@@ -221,19 +233,27 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                         Square_Light* sqlight = nullptr;
                         Dome_Light* domelight = nullptr;
 
-                        vec3 area_sample_position(0.0f);
+                        float distance = 10000.0f;
+                        float area_shadow = 1.0f;
                         int hdri_id = 1;
 
                         vec3 ray_dir = light->return_ray_direction(hit_pos, sample);
 
-                        Ray new_ray(hit_pos, ray_dir);
+                        // point light
+                        if (ptlight = dynamic_cast<Point_Light*>(light))
+                        {
+                            ray_dir = ptlight->return_ray_direction(hit_pos, sample);
+                            distance = dist(hit_pos, ptlight->position) - 0.001f;
+                        }
 
-                        float distance = 10000.0f;
-                        float area_shadow = 1.0f;
+                        // distant light
+                        else if (distlight = dynamic_cast<Distant_Light*>(light)) ray_dir = distlight->return_ray_direction(hit_pos, sample);
 
-                        if (ptlight = dynamic_cast<Point_Light*>(light)) distance = dist(hit_pos, ptlight->position) - 0.001f;
+                        // dome light
+                        else if (domelight = dynamic_cast<Dome_Light*>(light)) ray_dir = domelight->return_ray_direction(hit_pos, sample);
 
-                        if (sqlight = dynamic_cast<Square_Light*>(light))
+                        // square light
+                        else if (sqlight = dynamic_cast<Square_Light*>(light))
                         {
                             const vec3 light_sample_pos = sqlight->return_ray_direction(hit_pos, sample);
                             ray_dir = (light_sample_pos - hit_pos).normalize();
@@ -246,6 +266,8 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                                 area_shadow = -d;
                             }
                         }
+
+                        Ray new_ray(end_position + end_normal * 0.001f, end_normal);
 
                         float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
 
@@ -454,7 +476,7 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
 
     std::vector<int> light_path;
 
-    if (settings.integrator == 0) col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
+    if (settings.integrator == 0) col = pathtrace(s + x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
     else if (settings.integrator == 1) col = ambient_occlusion(s * x * y, sampler, ray, settings);
     else if (settings.integrator == 2) col = scene_viewer(ray, settings);
 
@@ -556,6 +578,7 @@ void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sa
             int id = ids[x + z * settings.xres];
             render_p(s, sampler[id], pixels, x, z, settings, cam, mats, lights, samples, bounces, stat);
         }
+
     }
 }
 
