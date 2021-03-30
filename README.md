@@ -6,8 +6,9 @@ This is my first project using C++, the goal of this is to learn both this langu
 
 
 # How To Build
-*
+**
 RomanoRender uses [Vcpkg](https://github.com/microsoft/vcpkg) to manage libraries accross different platforms and [CMake](https://cmake.org/) to support cross-platforms building. 
+
 
 Libraries needed are :
 - [Embree 3](https://github.com/embree/embree)
@@ -17,7 +18,6 @@ Libraries needed are :
 - [OpenMP](https://www.openmp.org/)
 - [OpenColorIO](https://opencolorio.org/)
 
-**Install VCPKG**
 
 Make sure Git is installed on your machine and run 
 ```shell
@@ -52,7 +52,7 @@ cmake --build ./ --config Release
 
 
 # Features
-***
+**
 Features list :
 - Intel embree3 
 - OpenColorIO support (default configuration shipped with the renderer is ACES 1.0.3)
@@ -73,7 +73,7 @@ Planned :
 
 
 # Showcase
-***
+**
 ![UI](https://cdn.discordapp.com/attachments/714940749707214890/826372472748244992/unknown.png)
 
 
