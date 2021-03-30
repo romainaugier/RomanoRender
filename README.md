@@ -17,7 +17,7 @@ Libraries needed are :
 - [OpenMP](https://www.openmp.org/)
 - [OpenColorIO](https://opencolorio.org/)
 
-*Install VCPKG*
+**Install VCPKG**\n
 Make sure Git is installed on your machine and run 
 ```shell
 git clone https://github.com/microsoft/vcpkg
