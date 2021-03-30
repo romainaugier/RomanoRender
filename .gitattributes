@@ -3,3 +3,5 @@
 *.cxx linguist-language=c++
 *.h linguist-language=C++
 *.hpp linguist-language=C++
+
+*.txt linguist-language=CMake
