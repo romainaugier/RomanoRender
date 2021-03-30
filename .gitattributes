@@ -3,8 +3,3 @@
 *.cxx linguist-language=c++
 *.h linguist-language=C++
 *.hpp linguist-language=C++
-
-*.tex linguist-detectable=false
-*.bib linguist-detectable=false
-*.hlsl linguist-detectable=false
-*.makefile linguist-detectable=false
