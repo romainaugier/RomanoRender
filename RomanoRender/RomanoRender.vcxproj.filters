@@ -141,12 +141,24 @@
     <ClInclude Include="src\utils\str_utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Dependencies\glfw\include\GL\gl3w.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dependencies\glfw\include\GL\glcorearb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dependencies\glfw\include\GLFW\glfw3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dependencies\glfw\include\GLFW\glfw3native.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dependencies\glfw\include\KHR\khrplatform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\app\gl3w.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\embree_utils.cpp">
@@ -245,9 +257,26 @@
     <ClCompile Include="src\utils\str_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="imgui\gl3w.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
     <Text Include="src\CMakeLists.txt" />
+    <Text Include="imgui\CMakeLists.txt" />
+    <Text Include="src\app\CMakeLists.txt" />
+    <Text Include="src\render\CMakeLists.txt" />
+    <Text Include="src\scene\CMakeLists.txt" />
+    <Text Include="src\shading\CMakeLists.txt" />
+    <Text Include="src\utils\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="Dependencies\glfw\lib-vc2019\glfw3.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="build_windows.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

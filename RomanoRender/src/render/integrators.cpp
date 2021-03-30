@@ -169,10 +169,10 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
         {
             int new_depth[] = { depth[0], depth[1], depth[2], depth[3] - 1 };
 
-            vec3 radius = mats[hit_mat_id].sss_radius;
-            float scale = mats[hit_mat_id].sss_scale;
-            float absorption = 1 - mats[hit_mat_id].sss_abs;
-            int steps = mats[hit_mat_id].sss_steps;
+            const vec3 radius = mats[hit_mat_id].sss_radius;
+            const float scale = mats[hit_mat_id].sss_scale;
+            const float absorption = 1 - mats[hit_mat_id].sss_abs;
+            const int steps = mats[hit_mat_id].sss_steps;
             bool transmitted = false;
             float step = 0.0f;
 
@@ -201,7 +201,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                     transmitted = true;
                     step = ray.rayhit.ray.tfar;
                     end_position = position + direction * step;
-                    end_normal = vec3(ray.rayhit.hit.Ng_x, ray.rayhit.hit.Ng_y, ray.rayhit.hit.Ng_z).normalize();
+                    end_normal = vec3(ray.rayhit.hit.Ng_x, ray.rayhit.hit.Ng_y, ray.rayhit.hit.Ng_z);
 
                     break;
                 }
@@ -220,8 +220,6 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
             if (transmitted)
             {
                 vec3 sss_light_contribution(0.0f);
-
-                //float a = 1.0f / powf((1.0f + scale * walked_distance / bleed), bleed);
 
                 for (auto light : lights)
                 {
@@ -271,13 +269,13 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
                         float NdotL = std::max(0.f, dot(hit_normal, ray_dir));
 
-                        Ray shadow(new_ray.origin, new_ray.direction, 0.001f, distance);
+                        Ray shadow(new_ray.origin, ray_dir, 0.0f, distance);
 
                         rtcOccluded1(settings.scene, &context, &shadow.ray);
 
                         if (shadow.ray.tfar > 0.0f)
                         {
-                            sss_light_contribution += (light->return_light_throughput(distance) * NdotL * area_shadow * inv_pi);
+                            sss_light_contribution += light->return_light_throughput(distance) * inv_pi;
                         }
                     }
                 }
@@ -476,7 +474,7 @@ void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, 
 
     std::vector<int> light_path;
 
-    if (settings.integrator == 0) col = pathtrace(s + x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
+    if (settings.integrator == 0) col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
     else if (settings.integrator == 1) col = ambient_occlusion(s * x * y, sampler, ray, settings);
     else if (settings.integrator == 2) col = scene_viewer(ray, settings);
 

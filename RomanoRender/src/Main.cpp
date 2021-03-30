@@ -46,8 +46,8 @@ int main(int, char**)
     float variance_threshold = 0.001;
 
     // initializing the ocio context
-    OCIO::ConstConfigRcPtr OCIO_CONFIG = initialize_ocio_config();
-    OCIO_Utils ocio_utils(OCIO_CONFIG);
+    OCIO::ConstConfigRcPtr ocio_config = initialize_ocio_config();
+    OCIO_Utils ocio_utils(ocio_config);
 
     // initializing different object we will need to render
     Logger log(3);
@@ -232,6 +232,7 @@ int main(int, char**)
 
     int previous_y = 0; 
     bool render = false;
+    bool user_stopped_render = false;
     bool save_window = false;
 
     // initializing gl texture for the renderview
@@ -284,6 +285,16 @@ int main(int, char**)
             edited = false;
         }
 
+        // if user has pressed the stop button, wait until the progressive render has finished rendering the entire frame to stop the process
+        if (render && user_stopped_render)
+        {
+            if (y == 0)
+            {
+                render = false;
+                user_stopped_render = false;
+            }
+        }
+
         // demo window for ImGui
         if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
@@ -297,7 +308,7 @@ int main(int, char**)
             progressive_render(sample_count, pixel_ids, y, sequence, render_view_utils.buffer1, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
 #pragma omp parallel for
-            for (int z = 0; z < settings.yres; z++)
+            for (int z = y; z < settings.yres; z++)
             {
                 for (int x = 0; x < settings.xres; x++)
                 {
@@ -310,6 +321,30 @@ int main(int, char**)
                 }
             }
 
+            if (y < settings.yres)
+            {
+                try
+                {
+                    // apply the ocio view transform
+                    OCIO::DisplayTransformRcPtr transform = OCIO::DisplayTransform::Create();
+                    transform->setInputColorSpaceName(OCIO::ROLE_SCENE_LINEAR);
+                    transform->setDisplay(ocio_utils.current_display);
+                    transform->setView(ocio_utils.current_view);
+                    OCIO::ConstProcessorRcPtr processor = ocio_config->getProcessor(transform);
+
+                    int size = 51;
+                    if (y == (settings.yres - 50)) size = 50;
+
+                    OCIO::PackedImageDesc img(&render_view_utils.buffer2[y * settings.xres].R, settings.xres, size, 3);
+                    processor->apply(img);
+                }
+                catch (OCIO::Exception& exception)
+                {
+                    std::cerr << "OCIO Error : " << exception.what() << "\n";
+                }
+            }
+
+            
             glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, render_view_utils.buffer2);
             glBindTexture(GL_TEXTURE_2D, 0);
@@ -360,6 +395,23 @@ int main(int, char**)
                 }
             }
 
+            // apply the ocio view transform
+            try
+            {
+                OCIO::DisplayTransformRcPtr transform = OCIO::DisplayTransform::Create();
+                transform->setInputColorSpaceName(OCIO::ROLE_SCENE_LINEAR);
+                transform->setDisplay(ocio_utils.current_display);
+                transform->setView(ocio_utils.current_view);
+                OCIO::ConstProcessorRcPtr processor = ocio_config->getProcessor(transform);
+
+                OCIO::PackedImageDesc img(&render_view_utils.buffer2[0].R, settings.xres, settings.yres, 3);
+                processor->apply(img);
+            }
+            catch (OCIO::Exception& exception)
+            {
+                std::cerr << "OCIO Error : " << exception.what() << "\n";
+            }
+
             glBindTexture(GL_TEXTURE_2D, render_view_utils.render_view_texture);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, settings.xres, settings.yres, GL_RGB, GL_FLOAT, render_view_utils.buffer2);
             glBindTexture(GL_TEXTURE_2D, 0);
@@ -388,7 +440,7 @@ int main(int, char**)
 
 
         // render view
-        rview_buttons.draw(render, render_view_utils, ocio_utils, sample_count, y, save_window);
+        rview_buttons.draw(render, user_stopped_render, render_view_utils, ocio_utils, sample_count, y, save_window);
         render_view.draw(render, render_view_utils, sample_count, y);
 
         // save window

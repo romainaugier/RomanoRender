@@ -243,6 +243,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Dependencies\glfw\include\GLFW\glfw3.h" />
+    <ClInclude Include="Dependencies\glfw\include\GLFW\glfw3native.h" />
+    <ClInclude Include="Dependencies\glfw\include\GL\gl3w.h" />
+    <ClInclude Include="Dependencies\glfw\include\GL\glcorearb.h" />
+    <ClInclude Include="Dependencies\glfw\include\KHR\khrplatform.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\ImFileDialog.h" />
     <ClInclude Include="imgui\imgui.h" />
@@ -287,6 +292,7 @@
     <ClInclude Include="src\utils\windows_utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="imgui\gl3w.c" />
     <ClCompile Include="imgui\ImFileDialog.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
@@ -298,7 +304,6 @@
     <ClCompile Include="src\app\console.cpp" />
     <ClCompile Include="src\app\editor.cpp" />
     <ClCompile Include="src\app\filedialog.cpp" />
-    <ClCompile Include="src\app\gl3w.c" />
     <ClCompile Include="src\app\log.cpp" />
     <ClCompile Include="src\app\menubar.cpp" />
     <ClCompile Include="src\app\outliner.cpp" />
@@ -324,7 +329,19 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
+    <Text Include="imgui\CMakeLists.txt" />
+    <Text Include="src\app\CMakeLists.txt" />
     <Text Include="src\CMakeLists.txt" />
+    <Text Include="src\render\CMakeLists.txt" />
+    <Text Include="src\scene\CMakeLists.txt" />
+    <Text Include="src\shading\CMakeLists.txt" />
+    <Text Include="src\utils\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="Dependencies\glfw\lib-vc2019\glfw3.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="build_windows.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
