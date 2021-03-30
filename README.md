@@ -1,12 +1,12 @@
 # Romano Render
-**
+
 First of all, I'd like to thank everyone that helped and helps me on the Graphics Programming discord, it's an amazing community, that you can find here : https://discord.gg/2nyse8kpKb
 
 This is my first project using C++, the goal of this is to learn both this language, software engineering, rendering, maths and computer graphics.
 
 
 # How To Build
-**
+
 RomanoRender uses [Vcpkg](https://github.com/microsoft/vcpkg) to manage libraries accross different platforms and [CMake](https://cmake.org/) to support cross-platforms building. 
 
 
@@ -52,7 +52,7 @@ cmake --build ./ --config Release
 
 
 # Features
-**
+
 Features list :
 - Intel embree3 
 - OpenColorIO support (default configuration shipped with the renderer is ACES 1.0.3)
@@ -73,7 +73,7 @@ Planned :
 
 
 # Showcase
-**
+
 ![UI](https://cdn.discordapp.com/attachments/714940749707214890/826372472748244992/unknown.png)
 
 
