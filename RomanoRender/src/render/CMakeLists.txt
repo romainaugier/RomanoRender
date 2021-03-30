@@ -1,5 +1,7 @@
 # RENDER #
 
+add_subdirectory(integrators)
+
 set(render_files
 	integrators.h
 	integrators.cpp
@@ -7,4 +9,4 @@ set(render_files
 
 add_library(render ${render_files})
 
-target_link_libraries(render shading)
+target_link_libraries(render integrators)

@@ -1,7 +1,6 @@
-#include "integrators.h"
+#include "pathtracer.h"
 
 
-// pathtracing integrator. Return a vec3 color
 vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::vector<Material>& mats, Render_Settings& settings, std::vector<Light*>& lights, int depth[], std::vector<int>& light_path, int samples[], Stats& stat)
 {
     // defining all the randoms and pseudo randoms we'll need for the samples
@@ -129,7 +128,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                         const vec3 F = schlick_fresnel(hit_ior, LdotH);
 
                         ggx += (D * G * F / (4 * std::max(0.001f, NdotV)));
-                        
+
                     }
                 }
             }
@@ -330,7 +329,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
 
     // background for dome lights
-    
+
     else
     {
         for (auto light : lights)
@@ -342,7 +341,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
                 int id = 0;
 
                 //if (depth[0] >= 6 || depth[0] >= 6 && depth[1] < 6 || depth[0] >= 6 && depth[2] < 10) id = -1;
-                
+
                 //else if (light_path.size() > 1 && light_path[0] == 1 && light_path[1] == 3) id = -1;
 
                 if (depth[0] >= 6 && !domelight->visible) return vec3(0.0f);
@@ -352,7 +351,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
             }
         }
     }
-    
+
 
 
     // nan filtering
@@ -370,213 +369,3 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
     return color;
 }
-
-
-// ao integrator
-vec3 ambient_occlusion(int s, std::vector<vec2>& sampler, const Ray& r, Render_Settings& settings)
-{
-    // defining all the randoms and pseudo randoms we'll need for the samples
-    const float random_float = generate_random_float_fast(s);
-    const int sampler_id = (int)(random_float * (sampler.size() - 1));
-    const vec2 sample = sampler[sampler_id];
-
-    // initialize embree context
-    RTCIntersectContext context;
-    rtcInitIntersectContext(&context);
-
-    float near_clipping = 0.0f;
-    float far_clipping = 10000.0f;
-
-    RTCRayHit new_ray = r.rayhit;
-
-    rtcIntersect1(settings.scene, &context, &new_ray);
-
-    if (new_ray.hit.geomID != RTC_INVALID_GEOMETRY_ID)
-    {
-        const vec3 hit_normal = vec3(new_ray.hit.Ng_x, new_ray.hit.Ng_y, new_ray.hit.Ng_z).normalize();
-        const vec3 hit_pos = vec3(new_ray.ray.org_x, new_ray.ray.org_y, new_ray.ray.org_z) + new_ray.ray.tfar * vec3(new_ray.ray.dir_x, new_ray.ray.dir_y, new_ray.ray.dir_z);
-
-        const vec3 new_ray_dir = sample_ray_in_hemisphere(hit_normal, sample);
-
-        Ray shadow(hit_pos + hit_normal * 0.001f, new_ray_dir, 0.0f, 3.0f);
-
-        rtcOccluded1(settings.scene, &context, &shadow.ray);
-
-        if (shadow.ray.tfar > 0.0f)
-        {
-            return vec3(fit(shadow.ray.tfar, 0.0f, 3.0f, 0.0f, 1.0f));
-        }
-
-        else return vec3(0.0f);
-    }
-
-    return vec3(0.0f);
-}
-
-
-// simple pt scene viewer
-vec3 scene_viewer(const Ray& r, Render_Settings& settings)
-{
-    // initialize embree context
-    RTCIntersectContext context;
-    rtcInitIntersectContext(&context);
-
-    float near_clipping = 0.0f;
-    float far_clipping = 10000.0f;
-
-    RTCRayHit new_ray = r.rayhit;
-
-    rtcIntersect1(settings.scene, &context, &new_ray);
-
-    if (new_ray.hit.geomID != RTC_INVALID_GEOMETRY_ID)
-    {
-        const vec3 hit_normal = vec3(new_ray.hit.Ng_x, new_ray.hit.Ng_y, new_ray.hit.Ng_z).normalize();
-        
-        return vec3(fit(dot(hit_normal, r.direction), -1.0f, 0.0f, 0.5f, 0.25f));
-    }
-
-    return vec3(0.0f);
-}
-
-
-// funtion used to render a single pixel, used for progressive rendering
-void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
-{
-    const float scale = tan(deg2rad(cam.fov * 0.5));
-
-    vec3 campos2(0.0, 0.0, 0.0);
-
-    vec3 col(0.f);
-
-    // aa Box-Muller
-    vec2 d = sampler[s];
-    float dx = sqrt(-0.5f * log(d.x)) * cos(2.0f * M_PI * d.y);
-    float dy = sqrt(-0.5f * log(d.x)) * sin(2.0f * M_PI * d.y);
-
-    float x_ = (2.0f * (x + dx) / (float)settings.xres - 1.0f) * cam.aspect * scale;
-    float y_ = (1.0f - 2.0f * (y + dy) / (float)settings.yres) * scale;
-
-    // dof
-    vec3 rand = vec3(0.0f);
-    if (cam.aperture > 0.0f) rand = (cam.aperture / 2.0f) * sample_unit_disk(s);
-    vec3 sample_pos = vec3(x_, y_, -1.0f);
-
-    // ray generation
-    vec3 rayOriginWorld = transform(campos2, cam.transformation_matrix);
-    vec3 rayPWorld = transform(sample_pos, cam.transformation_matrix);
-    vec3 rayDir = vec3(rayPWorld.x, rayPWorld.y, rayPWorld.z) - vec3(rayOriginWorld.x, rayOriginWorld.y, rayOriginWorld.z);
-
-    // depth of field
-    vec3 dir = cam.pos + cam.focus_dist * rayDir.normalize();
-    vec3 new_pos = cam.pos + rand;
-
-    Ray ray(new_pos, (dir - new_pos).normalize());
-
-    std::vector<int> light_path;
-
-    if (settings.integrator == 0) col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
-    else if (settings.integrator == 1) col = ambient_occlusion(s * x * y, sampler, ray, settings);
-    else if (settings.integrator == 2) col = scene_viewer(ray, settings);
-
-    //col = HableToneMap(col);
-
-    if (col.x < 0.0f || col.y < 0.0f || col.z < 0.0f)
-    {
-        col.x = std::max(col.x, 0.0f);
-        col.y = std::max(col.y, 0.0f);
-        col.z = std::max(col.z, 0.0f);
-
-    }
-
-    pixels[x + y * settings.xres].R += col.x;
-    pixels[x + y * settings.xres].G += col.y;
-    pixels[x + y * settings.xres].B += col.z;
-}
-
-
-// funtion used to render a single pixel, used for progressive rendering
-void render_p_fast(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
-{
-    const float scale = tan(deg2rad(cam.fov * 0.5));
-
-    vec3 campos2(0.0, 0.0, 0.0);
-
-    vec3 col(0.f);
-
-    // aa Box-Muller
-    vec2 d = sampler[s];
-    float dx = sqrt(-0.5f * log(d.x)) * cos(2.0f * M_PI * d.y);
-    float dy = sqrt(-0.5f * log(d.x)) * sin(2.0f * M_PI * d.y);
-
-    float x_ = (2.0f * (x + dx) / (float)settings.xres - 1.0f) * cam.aspect * scale;
-    float y_ = (1.0f - 2.0f * (y + dy) / (float)settings.yres) * scale;
-
-    // dof
-    vec3 rand = vec3(0.0f);
-    if (cam.aperture > 0.0f) rand = (cam.aperture / 2.0f) * sample_unit_disk(s);
-    vec3 sample_pos = vec3(x_, y_, -1.0f);
-
-    // ray generation
-    vec3 rayOriginWorld = transform(campos2, cam.transformation_matrix);
-    vec3 rayPWorld = transform(sample_pos, cam.transformation_matrix);
-    vec3 rayDir = vec3(rayPWorld.x, rayPWorld.y, rayPWorld.z) - vec3(rayOriginWorld.x, rayOriginWorld.y, rayOriginWorld.z);
-
-    // depth of field
-    vec3 dir = cam.pos + cam.focus_dist * rayDir.normalize();
-    vec3 new_pos = cam.pos + rand;
-
-    Ray ray(new_pos, (dir - new_pos).normalize());
-
-    std::vector<int> light_path;
-
-    if (settings.integrator == 0) col = pathtrace(s * x * y, sampler, ray, col, mats, settings, lights, bounces, light_path, samples, stat);
-    else if (settings.integrator == 1) col = ambient_occlusion(s * x * y, sampler, ray, settings);
-    else if (settings.integrator == 2) col = scene_viewer(ray, settings);
-
-    if (col.x < 0.0f || col.y < 0.0f || col.z < 0.0f)
-    {
-        col.x = std::max(col.x, 0.0f);
-        col.y = std::max(col.y, 0.0f);
-        col.z = std::max(col.z, 0.0f);
-
-    }
-
-    pixels[x + y * (settings.xres)].R += col.x;
-    pixels[x + y * (settings.xres)].G += col.y;
-    pixels[x + y * (settings.xres)].B += col.z;
-}
-
-
-// function used to render progressively to the screen
-void progressive_render(int s, int* ids, int y, std::vector<std::vector<vec2>>& sampler, color_t*& pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
-{
-    cam.fov = 2 * rad2deg(std::atan(36.0f / (2 * cam.focal_length)));
-
-#pragma omp parallel for
-    for (int z = y; z < std::min(y + 50, settings.yres); z++)
-    {
-        for (int x = 0; x < settings.xres; x++)
-        {
-            int id = ids[x + z * settings.xres];
-            render_p(s + x + z, sampler[id], pixels, x, z, settings, cam, mats, lights, samples, bounces, stat);
-        }
-    }
-}
-
-
-void progressive_render_fast(int s, int* ids, std::vector<std::vector<vec2>>& sampler, color_t*& pixels, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat)
-{
-    cam.fov = 2 * rad2deg(std::atan(36.0f / (2 * cam.focal_length)));
-
-#pragma omp parallel for
-    for (int z = 0; z < settings.yres; z++)
-    {
-        for (int x = 0; x < settings.xres; x++)
-        {
-            int id = ids[x + z * settings.xres];
-            render_p(s, sampler[id], pixels, x, z, settings, cam, mats, lights, samples, bounces, stat);
-        }
-
-    }
-}
-

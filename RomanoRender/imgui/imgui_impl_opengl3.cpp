@@ -88,6 +88,8 @@
 #include <stdint.h>     // intptr_t
 #endif
 
+#define IMGUI_IMPL_OPENGL_LOADER_GL3W
+
 // GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>

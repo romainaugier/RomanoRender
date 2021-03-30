@@ -18,7 +18,7 @@ static void glfw_error_callback(int error, const char* description)
 
 #include "OpenImageIO/imagebuf.h"
 
-#include "render/integrators.h"
+#include "render/render.h"
 #include "app/log.h"
 #include "app/console.h"
 #include "app/outliner.h"
@@ -66,7 +66,7 @@ int main(int, char**)
     initial_cam.~Camera();
 
     // loading sample sequences
-    std::vector<std::vector<vec2>> sequence = load_sequences("D:/dev/Repos/Samples");
+    std::vector<std::vector<vec2>> sequence = load_sequences("D:/GenepiRender/Samples");
 
     int* pixel_ids =  (int*)malloc(settings.xres * settings.yres * sizeof(int));
     
@@ -303,7 +303,7 @@ int main(int, char**)
 
         
         // Progressive rendering happens here
-        if (render && sample_count > 1 && settings.integrator == 0)
+        if (render && sample_count > 1 && settings.integrator < 2)
         {
             progressive_render(sample_count, pixel_ids, y, sequence, render_view_utils.buffer1, settings, cameras[0], materials, lights, samples, bounces, render_stats);
 
@@ -379,7 +379,7 @@ int main(int, char**)
         
         
 
-        if (render && sample_count < 2 || render && settings.integrator > 0)
+        if (render && sample_count < 2 || render && settings.integrator > 1)
         //if (render)
         {
             progressive_render_fast(sample_count, pixel_ids, sequence, render_view_utils.buffer1, settings, cameras[0], materials, lights, samples, bounces, render_stats);

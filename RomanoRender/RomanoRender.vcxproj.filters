@@ -36,9 +36,6 @@
     <ClInclude Include="src\shading\material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\integrators.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\shading\light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -156,6 +153,21 @@
     <ClInclude Include="Dependencies\glfw\include\KHR\khrplatform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\render\integrators\pathtracer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\integrators\ao.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\integrators\cartoon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\integrators\scene_view.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp">
@@ -189,9 +201,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\scene\camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\integrators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\app\log.cpp">
@@ -260,6 +269,21 @@
     <ClCompile Include="imgui\gl3w.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\integrators\pathtracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\integrators\ao.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\integrators\cartoon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\integrators\scene_view.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
@@ -270,6 +294,7 @@
     <Text Include="src\scene\CMakeLists.txt" />
     <Text Include="src\shading\CMakeLists.txt" />
     <Text Include="src\utils\CMakeLists.txt" />
+    <Text Include="src\render\integrators\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="Dependencies\glfw\lib-vc2019\glfw3.lib" />

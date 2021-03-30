@@ -3,7 +3,16 @@
 
 OCIO::ConstConfigRcPtr initialize_ocio_config()
 {
-	return OCIO::GetCurrentConfig();
+	try
+	{
+		return OCIO::GetCurrentConfig();
+	}
+	catch(OCIO::Exception & exception)
+	{
+		std::cerr << "OCIO : " << exception.what() << "\n";
+
+		return OCIO::Config::CreateFromFile("C:/Program Files/OCIO/aces_1.0.3/config.ocio");
+	}
 }
 
 
@@ -21,7 +30,6 @@ std::vector<char*> get_ocio_active_views(OCIO::ConstConfigRcPtr& config)
 	while (token != NULL)
 	{
 		remove_spaces(token);
-		printf("%s\n", token);
 		views_arr.push_back(token);
 		token = strtok(NULL, s);
 	}

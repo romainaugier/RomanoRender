@@ -48,8 +48,8 @@ void MenuBar::draw()
 		ImGui::Dummy(ImVec2(win_width.x - 150.0f, 0.0f));
 
 		// widgets for cpu and ram usage
-#undef max
-		float cpu_usage = std::max(0.1f, GetCPULoad());
+		float cpu_load = GetCPULoad();
+		float cpu_usage = cpu_load < 0.1f ? 0.1f : cpu_load;
 		ImVec4 cpu_color = ImVec4(cpu_usage, 1.0f - cpu_usage, 0.0f, 1.0f);
 
 		ImGui::PushItemWidth(20.0f);

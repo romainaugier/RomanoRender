@@ -10,9 +10,8 @@ project(RomanoRender)
 
 # Find packages
 find_package(embree 3 REQUIRED)
-find_package(OpenImageIO REQUIRED)
-find_package(Boost 1.75.0 REQUIRED)
-find_package(yaml-cpp REQUIRED)
+find_package(openimageio REQUIRED)
+find_package(Boost 1.73.0 REQUIRED)
 #find_package(alembic 1.7.16 REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(OpenColorIO REQUIRED)
@@ -39,10 +38,9 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 target_link_libraries(${PROJECT_NAME} PRIVATE embree)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENIMAGEIO_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
 #target_link_libraries(${PROJECT_NAME} PRIVATE Alembic::Alembic)
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(${PROJECT_NAME} PRIVATE OpenColorIO)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENCOLORIO_LIBRARIES})
 
 # Link RomanoRender libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui)

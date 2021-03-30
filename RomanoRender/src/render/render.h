@@ -1,35 +1,14 @@
 #pragma once
 
-#include "utils/maths_utils.h"
-#include "utils/utils.h"
-#include "utils/sampling_utils.h"
-#include "utils/embree_utils.h"
-#include "shading/material.h"
-#include "shading/light.h"
-#include "shading/bsdf.h"
-#include "scene/settings.h"
-#include "scene/camera.h"
-#include "scene/stats.h"
-
-
-#undef min
-#undef max
+#include "integrators/pathtracer.h"
+#include "integrators/ao.h"
+#include "integrators/scene_view.h"
+#include "integrators/cartoon.h"
 
 
 #ifndef RENDER
 #define RENDER
 
-
-// pathtracing integrator. Return a vec3 color
-vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std::vector<Material>& mats, Render_Settings& settings, std::vector<Light*>& lights, int depth[], std::vector<int>& light_path, int samples[], Stats& stat);
-
-
-// ao integrator
-vec3 ambient_occlusion(int s, std::vector<vec2>& sampler, const Ray& r, Render_Settings& settings);
-
-
-// scene viewer integrator
-vec3 scene_viewer(const Ray& r, Render_Settings& settings);
 
 // funtion used to render a single pixel, used for progressive rendering
 void render_p(int s, std::vector<vec2>& sampler, color_t* pixels, int x, int y, Render_Settings& settings, Camera& cam, std::vector<Material>& mats, std::vector<Light*>& lights, int samples[], int bounces[], Stats& stat);

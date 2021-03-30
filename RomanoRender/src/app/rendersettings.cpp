@@ -22,7 +22,8 @@ void Render_Settings_Window::draw(Render_Settings& settings, Render_View_Utils& 
         ImGui::SameLine();
         if(ImGui::SmallButton("Submit")) reset = true;
 
-
+        // when we change the resolution, reset everything : render buffer, display buffer...
+        // we need to free the memory and reallocate it
         if (reset)
         {
             utils.resolution.x = settings.xres;
@@ -60,7 +61,7 @@ void Render_Settings_Window::draw(Render_Settings& settings, Render_View_Utils& 
 
     if (ImGui::CollapsingHeader("Integrator"))
     {
-        const char* items[] = { "Pathtracer", "Ambient Occlusion", "Scene Viewer" };
+        const char* items[] = { "Pathtracer", "Cartoon", "Ambient Occlusion", "Scene Viewer" };
 
         ImGui::Combo("Mode", &settings.integrator, items, IM_ARRAYSIZE(items));
         if (ImGui::IsItemEdited()) { change = true; }

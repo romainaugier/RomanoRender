@@ -123,7 +123,7 @@
       </SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)\imgui;$(SolutionDir)Dependencies\tracy-0.7.4;$(SolutionDir)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)\imgui;$(SolutionDir)\src</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>
       </UndefinePreprocessorDefinitions>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -159,7 +159,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions> __AVX__; _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)\imgui;$(SolutionDir)Dependencies\tracy-0.7.4;$(SolutionDir)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)\imgui;$(SolutionDir)\src</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>
       </UndefinePreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
@@ -191,7 +191,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>TRACY_ENABLE; _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)\imgui;$(SolutionDir)Dependencies\tracy-0.7.4;$(SolutionDir)\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\glfw\include;$(SolutionDir)\imgui;$(SolutionDir)\src</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>
       </UndefinePreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -267,6 +267,10 @@
     <ClInclude Include="src\app\renderview.h" />
     <ClInclude Include="src\app\shelf.h" />
     <ClInclude Include="src\maths\maths.h" />
+    <ClInclude Include="src\render\integrators\ao.h" />
+    <ClInclude Include="src\render\integrators\cartoon.h" />
+    <ClInclude Include="src\render\integrators\pathtracer.h" />
+    <ClInclude Include="src\render\integrators\scene_view.h" />
     <ClInclude Include="src\scene\tinyobjl.h" />
     <ClInclude Include="src\shading\bsdf.h" />
     <ClInclude Include="src\scene\camera.h" />
@@ -277,7 +281,7 @@
     <ClInclude Include="src\shading\material.h" />
     <ClInclude Include="src\utils\maths_utils.h" />
     <ClInclude Include="src\utils\matrix.h" />
-    <ClInclude Include="src\render\integrators.h" />
+    <ClInclude Include="src\render\render.h" />
     <ClInclude Include="src\scene\scene.h" />
     <ClInclude Include="src\scene\objloader.h" />
     <ClInclude Include="src\utils\ocio_utils.h" />
@@ -311,7 +315,11 @@
     <ClCompile Include="src\app\renderview.cpp" />
     <ClCompile Include="src\app\shelf.cpp" />
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\render\integrators.cpp" />
+    <ClCompile Include="src\render\render.cpp" />
+    <ClCompile Include="src\render\integrators\ao.cpp" />
+    <ClCompile Include="src\render\integrators\cartoon.cpp" />
+    <ClCompile Include="src\render\integrators\pathtracer.cpp" />
+    <ClCompile Include="src\render\integrators\scene_view.cpp" />
     <ClCompile Include="src\scene\camera.cpp" />
     <ClCompile Include="src\scene\scene.cpp" />
     <ClCompile Include="src\scene\settings.cpp" />
@@ -333,6 +341,7 @@
     <Text Include="src\app\CMakeLists.txt" />
     <Text Include="src\CMakeLists.txt" />
     <Text Include="src\render\CMakeLists.txt" />
+    <Text Include="src\render\integrators\CMakeLists.txt" />
     <Text Include="src\scene\CMakeLists.txt" />
     <Text Include="src\shading\CMakeLists.txt" />
     <Text Include="src\utils\CMakeLists.txt" />
