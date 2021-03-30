@@ -52,7 +52,6 @@ cmake --build ./ --config Release
 
 # Features
 
-Features list :
 - Intel embree3 
 - OpenColorIO support (default configuration shipped with the renderer is ACES 1.0.3)
 - OpenImageIO support for image output (various format supported : exr, jpg, png, tiff...)
@@ -62,9 +61,12 @@ Features list :
 - Rich render interface with a progressive render-view, scene editor (per scene object transform and material)
 - Basic pinhole camera model with depth of field
 
-Planned :
+# Planned 
+
 - Importance Sampling / Multiple Importance Sampling
 - More BxDFs
+- Texture system 
+- Small procedural texturing language
 - Adaptive sampling
 - Improve the ui
 - Add support for Alembic file format
