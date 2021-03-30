@@ -1,35 +1,79 @@
 # Romano Render
-
-*******************************************************************************************************************
-I'm currently working on the CMake setup to get the files more easily if you want to fork the repository
-*******************************************************************************************************************
-
+***
 First of all, I'd like to thank everyone that helped and helps me on the Graphics Programming discord, it's an amazing community, that you can find here : https://discord.gg/2nyse8kpKb
 
 This is my first project using C++, the goal of this is to learn both this language, software engineering, rendering, maths and computer graphics.
 
+
+# How To Build
+***
+RomanoRender uses [Vcpkg](https://github.com/microsoft/vcpkg) to manage libraries accross different platforms and [CMake](https://cmake.org/) to support cross-platforms building. 
+
+Libraries needed are :
+- [Embree 3](https://github.com/embree/embree)
+- [OpenImageIO](https://github.com/OpenImageIO/oiio)
+- [Boost 1.75.0](https://www.boost.org/)
+- [Yaml-cpp](https://github.com/jbeder/yaml-cpp)
+- [OpenMP](https://www.openmp.org/)
+- [OpenColorIO](https://opencolorio.org/)
+
+**Install VCPKG**
+Make sure Git is installed on your machine and run 
+```shell
+git clone https://github.com/microsoft/vcpkg
+.\vcpkg\bootstrap-vcpkg.bat
+```
+
+Once Vcpkg is installed, run the following to integrate it within visual studio
+```
+.\vcpkg\vcpkg integrate install
+```
+
+
+Run the following to install the needed libraries. This might take up to 30 min to build everything (OpenImageIO has a lot of dependencies)
+```
+cd /path/to/vcpkg/installation
+vcpkg install embree
+vcpkg install OpenImageIO
+vcpkg install Boost 1.75.0
+vcpkg install OpenMP
+vcpkg install OpenColorIO
+```
+
+
+Once all needed libraries have been installed, you can run CMake to build the project
+```
+mkdir build
+cd build
+cmake ../
+cmake --build ./ --config Release
+```
+
+
+# Features
+***
 Features list :
-- Intel embree3 for fast path tracing
-- Square, distant, dome/hdri and point lights
-- Direct and indirect illumination
-- Basic shader with lambertian for the diffuse brdf and GGX/Cook-Torrance for the reflective brdf and the btdf
-- Random Walk Subsurface Scattering
-- OpenImageIO for output (jpg, exr, png, bmp)
-- Multithreaded rendering
-- Obj format support
-- In progress UI with node based rendering and progressive renderview
+- Intel embree3 
+- OpenColorIO support (default configuration shipped with the renderer is ACES 1.0.3)
+- OpenImageIO support for image output (various format supported : exr, jpg, png, tiff...)
+- Obj file format supported
+- Different integrators (Pathtracing, Cartoon, Ambient Occlusion, Scene Viewer)
+- Uber-Shader (with different layers : Lambertian BRDF, GGX/Cook-Torrance BRDF/BTDF, Random-Walk SSS)
+- Rich render interface with a progressive render-view, scene editor (per scene object transform and material)
+- Basic pinhole camera model with depth of field
 
 Planned :
-- Improved camera model with physically based parameters
-- Multiple Importance Sampling
-- Uber-shader
+- Importance Sampling / Multiple Importance Sampling
+- More BxDFs
 - Adaptive sampling
 - Improve the ui
-- Create a better scene parser and scene system
-- Add support for Alembic format
+- Add support for Alembic file format
 - Improve overall performance of the renderer
 
-Current progress : https://streamable.com/9qmr4u
+
+# Showcase
+***
+![UI](https://cdn.discordapp.com/attachments/714940749707214890/826372472748244992/unknown.png)
 
 
 Journey:
