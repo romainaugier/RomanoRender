@@ -14,7 +14,6 @@ Libraries needed are :
 - [Embree 3](https://github.com/embree/embree)
 - [OpenImageIO](https://github.com/OpenImageIO/oiio)
 - [Boost 1.75.0](https://www.boost.org/)
-- [Yaml-cpp](https://github.com/jbeder/yaml-cpp)
 - [OpenMP](https://www.openmp.org/)
 - [OpenColorIO](https://opencolorio.org/)
 
