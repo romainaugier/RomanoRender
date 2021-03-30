@@ -52,7 +52,7 @@ void Render_View::draw(bool& render, Render_View_Utils& utils, int& s, int& y)
 }
 
 
-void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, OCIO_Utils& ocio_utils, int& s, int& y, bool& save_window)
+void Render_View_Buttons::draw(bool& render, bool& user_stopped_render, Render_View_Utils& utils, OCIO_Utils& ocio_utils, int& s, int& y, bool& save_window)
 {
     ImGui::Begin("Render Commands");
     {
@@ -64,7 +64,7 @@ void Render_View_Buttons::draw(bool& render, Render_View_Utils& utils, OCIO_Util
         ImGui::SameLine();
         if (ImGui::Button("Stop"))
         {
-            render = false;
+            user_stopped_render = true;
         }
 
         ImGui::SameLine();

@@ -23,9 +23,7 @@ void Geometry_Shelf::draw(Render_Settings& settings, std::vector<Object>& object
 				const std::vector<std::filesystem::path>& res = ifd::FileDialog::Instance().GetResults();
 				for (const auto& r : res)
 				{
-					std::vector<Material> mats;
 					load_object(settings.device, r.u8string(), objects, console);
-					printf("Open : %s\n", r.u8string().c_str());
 				}
 
 				change = true;

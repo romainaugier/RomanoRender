@@ -122,6 +122,12 @@ void load_object(RTCDevice& g_device, std::string path, std::vector<Object>& obj
 
             RTCGeometry current_geometry = load_geometry(object, g_device, name, orig, vtx_number);
 
+            // if an object has already the name in the scene, increment the name so it avoids conflicts
+            for (auto& o : objects)
+            {
+                if (o.name == name) name = increment_name(name);
+            }
+
             unsigned int m_id = i;
             i++;
 

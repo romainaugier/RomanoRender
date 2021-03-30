@@ -8,6 +8,7 @@
 #include "utils/embree_utils.h"
 #include "utils/file_utils.h"
 #include "utils/matrix.h"
+#include "utils/str_utils.h"
 #include "shading/material.h"
 #include "shading/light.h"
 #include "app/console.h"
