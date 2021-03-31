@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "str_utils.h"
+#include "vec3.h"
 
 namespace OCIO = OCIO_NAMESPACE;
 
@@ -18,10 +19,12 @@ namespace OCIO = OCIO_NAMESPACE;
 // initialize the ocio configuration at the app start
 OCIO::ConstConfigRcPtr initialize_ocio_config();
 
+
 // get all the views as separated tokens
 std::vector<char*> get_ocio_active_views(OCIO::ConstConfigRcPtr& config);
 
 
+// small struct to initalize the config
 struct OCIO_Utils
 {
 	char* current_view;
@@ -37,6 +40,8 @@ struct OCIO_Utils
 };
 
 
+// transform input color to scene linear
+void ocio_color_pick_to_scene(vec3& color, OCIO::ConstConfigRcPtr& config);
 
 
 

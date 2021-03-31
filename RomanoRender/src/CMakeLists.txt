@@ -13,7 +13,6 @@ find_package(embree 3 REQUIRED)
 find_package(openimageio REQUIRED)
 find_package(Boost 1.73.0 REQUIRED)
 #find_package(alembic 1.7.16 REQUIRED)
-find_package(OpenMP REQUIRED)
 find_package(OpenColorIO REQUIRED)
 
 # Include dependencies
@@ -28,6 +27,11 @@ add_subdirectory(shading)
 add_subdirectory(scene)
 add_subdirectory(render)
 
+# Link dependencies libraries with own libraries
+target_link_libraries(utils embree)
+target_link_libraries(utils ${Boost_LIBRARIES})
+target_link_libraries(utils ${OPENCOLORIO_LIBRARIES})
+
 # Adding our executable
 add_executable(${PROJECT_NAME} Main.cpp)
 
@@ -35,16 +39,15 @@ add_executable(${PROJECT_NAME} Main.cpp)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE embree)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENIMAGEIO_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES})
-#target_link_libraries(${PROJECT_NAME} PRIVATE Alembic::Alembic)
-target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENCOLORIO_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} embree)
+target_link_libraries(${PROJECT_NAME} ${OPENIMAGEIO_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+#target_link_libraries(${PROJECT_NAME} Alembic::Alembic)
+target_link_libraries(${PROJECT_NAME} ${OPENCOLORIO_LIBRARIES})
 
 # Link RomanoRender libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
-target_link_libraries(${PROJECT_NAME} PRIVATE app)
+target_link_libraries(${PROJECT_NAME} imgui)
+target_link_libraries(${PROJECT_NAME} app)
 
 # Copy utils to build directory
 add_custom_command(

@@ -350,6 +350,7 @@
     <Library Include="Dependencies\glfw\lib-vc2019\glfw3.lib" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="build_vcpkg.bat" />
     <None Include="build_windows.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

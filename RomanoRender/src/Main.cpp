@@ -66,7 +66,7 @@ int main(int, char**)
     initial_cam.~Camera();
 
     // loading sample sequences
-    std::vector<std::vector<vec2>> sequence = load_sequences("D:/GenepiRender/Samples");
+    std::vector<std::vector<vec2>> sequence = load_sequences("D:/dev/Utils/Samples");
 
     int* pixel_ids =  (int*)malloc(settings.xres * settings.yres * sizeof(int));
     
@@ -334,6 +334,10 @@ int main(int, char**)
 
                     int size = 51;
                     if (y == (settings.yres - 50)) size = 50;
+                    if ((settings.yres - y) < 50)
+                    {
+                        size = settings.yres - y;
+                    }
 
                     OCIO::PackedImageDesc img(&render_view_utils.buffer2[y * settings.xres].R, settings.xres, size, 3);
                     processor->apply(img);
@@ -465,7 +469,7 @@ int main(int, char**)
         outliner.draw(objects, cameras, lights, console, edited);
 
         // editor
-        editor.draw(outliner, objects, lights, cameras, edited);
+        editor.draw(outliner, objects, lights, cameras, ocio_config, edited);
 
 
         // Rendering

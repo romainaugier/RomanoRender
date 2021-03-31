@@ -11,7 +11,7 @@ OCIO::ConstConfigRcPtr initialize_ocio_config()
 	{
 		std::cerr << "OCIO : " << exception.what() << "\n";
 
-		return OCIO::Config::CreateFromFile("C:/Program Files/OCIO/aces_1.0.3/config.ocio");
+		return OCIO::Config::CreateFromFile("C:/Program Files/OCIO/aces_1.2/config_chrisb.ocio");
 	}
 }
 
@@ -35,4 +35,19 @@ std::vector<char*> get_ocio_active_views(OCIO::ConstConfigRcPtr& config)
 	}
 
 	return views_arr;
+}
+
+
+void ocio_color_pick_to_scene(vec3& color, OCIO::ConstConfigRcPtr& config)
+{
+	try
+	{
+		OCIO::ConstProcessorRcPtr processor = config->getProcessor(OCIO::ROLE_COLOR_PICKING, OCIO::ROLE_SCENE_LINEAR);
+		OCIO::PackedImageDesc clr(&color.x, 1, 1, 3);
+		processor->apply(clr);
+	}
+	catch (OCIO::Exception& exception)
+	{
+		std::cerr << "OCIO : " << exception.what() << "\n";
+	}
 }

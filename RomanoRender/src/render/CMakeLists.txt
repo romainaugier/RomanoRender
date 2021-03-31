@@ -3,8 +3,8 @@
 add_subdirectory(integrators)
 
 set(render_files
-	integrators.h
-	integrators.cpp
+	render.h
+	render.cpp
 )
 
 add_library(render ${render_files})

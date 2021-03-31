@@ -11,6 +11,6 @@ set(integrator_files
 	scene_view.cpp
 )
 
-add_library(integrator_files integrators)
+add_library(integrators ${integrator_files})
 
 target_link_libraries(integrators shading)

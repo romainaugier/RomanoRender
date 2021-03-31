@@ -136,7 +136,7 @@ vec3 pathtrace(int s, std::vector<vec2>& sampler, const Ray& r, vec3 color, std:
 
         vec3 mix(1.0f);
         const float f0 = fresnel_reflection_coef(hit_ior.x, hit_normal, r.direction) * hit_reflectance;
-        kd = (1.0f - clamp(abs(f0), 0.02f, 1.0f)) * (1.0f - hit_metallic) * (1.0f - hit_refraction) * hit_diff_weight;
+        kd = (1.0f - clamp(abs(f0), 0.00f, 1.0f)) * (1.0f - hit_metallic) * (1.0f - hit_refraction) * hit_diff_weight;
 
         // refraction
         if (hit_refraction > 0.0f)

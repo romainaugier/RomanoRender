@@ -1,7 +1,7 @@
 #include "editor.h"
 
 
-void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, bool& edited)
+void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<Light*>& lights, std::vector<Camera>& cameras, OCIO::ConstConfigRcPtr& config, bool& edited)
 {
 	if (objects.size() > 0 || cameras.size() > 0 || lights.size() > 0)
 	{
@@ -36,8 +36,9 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 
 				if (ImGui::CollapsingHeader("Diffuse"))
 				{
-					ImGui::ColorEdit3("Diffuse Color", &objects[s].material.diffuse_color.x, ImGuiColorEditFlags_Float);
-					if (ImGui::IsItemEdited()) { edited = true; }
+					static vec3 diff_color(0.5f);
+					ImGui::ColorEdit3("Diffuse Color", &diff_color.x, ImGuiColorEditFlags_Float);
+					if (ImGui::IsItemEdited()) { edited = true; objects[s].material.diffuse_color = diff_color;  ocio_color_pick_to_scene(objects[s].material.diffuse_color, config); }
 
 					ImGui::DragFloat("Diffuse Weight", &objects[s].material.diffuse_weight, 0.05f, 0.0f, 1.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
@@ -45,8 +46,9 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 
 				if (ImGui::CollapsingHeader("Reflection"))
 				{
-					ImGui::ColorEdit3("Reflection Color", &objects[s].material.reflectance_color.x, ImGuiColorEditFlags_Float);
-					if (ImGui::IsItemEdited()) { edited = true; }
+					static vec3 reflection_color(objects[s].material.reflectance_color);
+					ImGui::ColorEdit3("Reflection Color", &reflection_color.x, ImGuiColorEditFlags_Float);
+					if (ImGui::IsItemEdited()) { edited = true; objects[s].material.reflectance_color = reflection_color; ocio_color_pick_to_scene(objects[s].material.reflectance_color, config); }
 
 					ImGui::DragFloat("Reflection Weight", &objects[s].material.reflectance, 0.05f, 0.0f, 1.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
@@ -63,8 +65,9 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 
 				if (ImGui::CollapsingHeader("Refraction/Transmission"))
 				{
-					ImGui::ColorEdit3("Refraction Color", &objects[s].material.refraction_color.x, ImGuiColorEditFlags_Float);
-					if (ImGui::IsItemEdited()) { edited = true; }
+					static vec3 refraction_color(objects[s].material.refraction_color);
+					ImGui::ColorEdit3("Refraction Color", &refraction_color.x, ImGuiColorEditFlags_Float);
+					if (ImGui::IsItemEdited()) { edited = true; objects[s].material.refraction_color = refraction_color;  ocio_color_pick_to_scene(objects[s].material.refraction_color, config); }
 
 					ImGui::DragFloat("Refraction Weight", &objects[s].material.refraction, 0.05f, 0.0f, 1.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
@@ -75,8 +78,9 @@ void Editor::draw(Outliner& outliner, std::vector<Object>& objects, std::vector<
 
 				if (ImGui::CollapsingHeader("Subsurface Scattering"))
 				{
-					ImGui::ColorEdit3("Surface Color", &objects[s].material.sss_color.x, ImGuiColorEditFlags_Float);
-					if (ImGui::IsItemEdited()) { edited = true; }
+					static vec3 sss_color(objects[s].material.sss_color);
+					ImGui::ColorEdit3("Surface Color", &sss_color.x, ImGuiColorEditFlags_Float);
+					if (ImGui::IsItemEdited()) { edited = true; objects[s].material.sss_color = sss_color; ocio_color_pick_to_scene(objects[s].material.sss_color, config); }
 
 					ImGui::DragFloat("Subsurface Weigth", &objects[s].material.sss, 0.05f, 0.0f, 1.0f);
 					if (ImGui::IsItemEdited()) { edited = true; }
