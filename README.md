@@ -14,7 +14,6 @@ Libraries needed are :
 - [Embree 3](https://github.com/embree/embree)
 - [OpenImageIO](https://github.com/OpenImageIO/oiio)
 - [Boost 1.75.0](https://www.boost.org/)
-- [OpenMP](https://www.openmp.org/)
 - [OpenColorIO](https://opencolorio.org/)
 
 
@@ -35,8 +34,7 @@ Run the following to install the needed libraries. This might take up to 30 min 
 cd /path/to/vcpkg/installation
 vcpkg install embree
 vcpkg install OpenImageIO
-vcpkg install Boost 1.75.0
-vcpkg install OpenMP
+vcpkg install Boost
 vcpkg install OpenColorIO
 ```
 
