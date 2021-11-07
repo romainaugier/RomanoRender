@@ -2,7 +2,7 @@
 
 First of all, I'd like to thank everyone that helped and helps me on the Graphics Programming discord, it's an amazing community, that you can find here : https://discord.gg/2nyse8kpKb
 
-This is my first project using C++, the goal of this is to learn both this language, software engineering, rendering, maths and computer graphics.
+This was my first project using C++, the goal of this was to learn both this language, software engineering, rendering, maths and computer graphics. I've decided to end this project here and start a new pathtracer, [RomanoRender++](https://github.com/romainaugier/RomanoRender2), to apply everything I've learned and create a more performant and versatile render engine, instead of rewriting almost everything here. I'll leave this project as it is, to have a memory of it but also compare to my new renderer and see how I've progressed.
 
 
 # How To Build
